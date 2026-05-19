@@ -105,3 +105,37 @@ export function registerTizenKeys() {
     );
   }
 }
+export function registerRemoteKeys() {
+  try {
+    if (
+      window.tizen &&
+      window.tizen.tvinputdevice &&
+      window.tizen.tvinputdevice.registerKey
+    ) {
+      const keys = [
+        "MediaPlay",
+        "MediaPause",
+        "MediaStop",
+        "MediaRewind",
+        "MediaFastForward",
+        "ColorF0Red",
+        "ColorF1Green",
+        "ColorF2Yellow",
+        "ColorF3Blue",
+        "ChannelUp",
+        "ChannelDown",
+        "Guide",
+        "Info",
+        "Exit"
+      ];
+
+      keys.forEach(function (key) {
+        try {
+          window.tizen.tvinputdevice.registerKey(key);
+        } catch (e) {}
+      });
+    }
+  } catch (e) {
+    console.log("registerRemoteKeys failed", e);
+  }
+}
