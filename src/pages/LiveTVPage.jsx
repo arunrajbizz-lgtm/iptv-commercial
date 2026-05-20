@@ -1,628 +1,446 @@
-import {
-  useEffect,
-  useState
-} from "react";
+import { useEffect, useMemo, useState } from "react";
+import { navigateTo } from "../utils/navigation";
+import { KEYS } from "../utils/tizenRemote";
+import { getLiveCategories, getLiveStreams } from "../services/xtreamApi";
+import { getFavorites, toggleFavorite } from "../utils/FavoritesManager";
+import { saveRecentChannel } from "../utils/HistoryManager";
+import focusManager from "../core/FocusManager";
+import navigationManager from "../core/NavigationManager";
+import "./LiveTVPage.css";
 
-import {
-  KEYS
-} from "../utils/tizenRemote";
+const ALL_CATEGORY = {
+  category_id: "__all",
+  category_name: "All Channels"
+};
 
-import {
-  getLiveCategories,
-  getLiveStreams,
-  getEPG
-} from "../services/xtreamApi";
+const FAVORITES_CATEGORY = {
+  category_id: "__favorites",
+  category_name: "Favorites"
+};
 
-import focusManager
-from "../core/FocusManager";
+const RECENT_CATEGORY = {
+  category_id: "__recent",
+  category_name: "Recent"
+};
 
-import navigationManager
-from "../core/NavigationManager";
+function readJson(key, fallback) {
+  try {
+    return JSON.parse(localStorage.getItem(key)) || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function isEnter(event) {
+  return event.keyCode === KEYS.ENTER || event.keyCode === 65385;
+}
+
+function normalizeChannel(item, sourceType) {
+  return {
+    ...item,
+    stream_id: item.stream_id || item.id || item.stream_url,
+    name: item.name || item.title || "Untitled Channel",
+    category_id: item.category_id || item.category_name || "General",
+    category_name: item.category_name || item.group || "General",
+    stream_icon: item.stream_icon || item.logo || "",
+    stream_url: item.stream_url || item.url || "",
+    source_type: sourceType
+  };
+}
 
 export default function LiveTVPage() {
+  const [categories, setCategories] = useState([]);
+  const [allChannels, setAllChannels] = useState([]);
+  const [channels, setChannels] = useState([]);
+  const [focusedCategory, setFocusedCategory] = useState(0);
+  const [focusedChannel, setFocusedChannel] = useState(0);
+  const [zone, setZone] = useState("categories");
+  const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const [categories,
-    setCategories] =
-    useState([]);
+  const filteredChannels = useMemo(() => {
+    const text = query.trim().toLowerCase();
+    if (!text) return channels;
 
-  const [channels,
-    setChannels] =
-    useState([]);
+    return channels.filter((channel) => (
+      channel.name?.toLowerCase().includes(text)
+      ||
+      channel.category_name?.toLowerCase().includes(text)
+    ));
+  }, [channels, query]);
 
-  const [focusedCategory,
-    setFocusedCategory] =
-    useState(0);
-
-  const [focusedChannel,
-    setFocusedChannel] =
-    useState(0);
-
-  const [zone,
-    setZone] =
-    useState("categories");
-
-  // INIT
   useEffect(() => {
-
-    focusManager.setZone(
-      "content"
-    );
-
-    loadCategories();
-
+    focusManager.setZone("content");
+    loadInitialData();
   }, []);
 
-  // LOAD CATEGORIES
-  async function loadCategories() {
+  useEffect(() => {
+    scrollFocused("category", focusedCategory);
+  }, [focusedCategory]);
 
-    try {
+  useEffect(() => {
+    scrollFocused("channel", focusedChannel);
+  }, [focusedChannel, filteredChannels]);
 
-      const iptv =
-        JSON.parse(
+  useEffect(() => {
+    function handleKeys(event) {
+      const active = document.activeElement;
+      const editing = active && active.tagName === "INPUT";
 
-          localStorage.getItem(
-            "iptv"
-          )
-
-        );
-
-      if (
-        !iptv
-        ||
-        iptv.type !== "xtream"
-      ) {
-
+      if (editing) {
+        if (event.keyCode === KEYS.BACK) {
+          active.blur();
+          event.preventDefault();
+        }
         return;
       }
 
-      const data =
-        await getLiveCategories(
+      if (zone === "categories") {
+        handleCategoryKeys(event);
+        return;
+      }
 
+      handleChannelKeys(event);
+    }
+
+    document.addEventListener("keydown", handleKeys);
+    return () => document.removeEventListener("keydown", handleKeys);
+  }, [zone, focusedCategory, focusedChannel, categories, filteredChannels]);
+
+  function scrollFocused(type, index) {
+    const el = document.querySelector(`[data-${type}-index="${index}"]`);
+    if (!el) return;
+    el.scrollIntoView({
+      block: "nearest",
+      inline: "nearest",
+      behavior: "smooth"
+    });
+  }
+
+  async function loadInitialData() {
+    setLoading(true);
+    setError("");
+
+    try {
+      const iptv = readJson("iptv", null);
+
+      if (!iptv) {
+        navigateTo("/login");
+        return;
+      }
+
+      if (iptv.type === "m3u") {
+        const list = readJson("m3u_channels", []).map((item) => normalizeChannel(item, "m3u"));
+        const grouped = buildM3uCategories(list);
+
+        setAllChannels(list);
+        setCategories([ALL_CATEGORY, FAVORITES_CATEGORY, RECENT_CATEGORY, ...grouped]);
+        setChannels(list);
+        setLoading(false);
+        return;
+      }
+
+      const providerCategories = await getLiveCategories(
+        iptv.host,
+        iptv.username,
+        iptv.password
+      );
+
+      const cats = [
+        ALL_CATEGORY,
+        FAVORITES_CATEGORY,
+        RECENT_CATEGORY,
+        ...(providerCategories || [])
+      ];
+
+      setCategories(cats);
+
+      await selectCategory(ALL_CATEGORY, {
+        skipFocus: true,
+        providerCategories
+      });
+    } catch (err) {
+      setError(err?.message || "Unable to load live TV.");
+      setLoading(false);
+    }
+  }
+
+  function buildM3uCategories(list) {
+    const map = new Map();
+
+    list.forEach((channel) => {
+      const id = channel.category_name || "General";
+      if (!map.has(id)) {
+        map.set(id, {
+          category_id: id,
+          category_name: id
+        });
+      }
+    });
+
+    return Array.from(map.values()).sort((a, b) => (
+      a.category_name.localeCompare(b.category_name)
+    ));
+  }
+
+  async function selectCategory(category, options = {}) {
+    if (!category) return;
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const iptv = readJson("iptv", null);
+      let nextChannels = [];
+
+      if (category.category_id === "__favorites") {
+        nextChannels = getFavorites().map((item) => normalizeChannel(item, item.source_type || iptv?.type));
+      } else if (category.category_id === "__recent") {
+        nextChannels = readJson("recent_channels", []).map((item) => normalizeChannel(item, item.source_type || iptv?.type));
+      } else if (iptv?.type === "m3u") {
+        const source = allChannels.length
+          ? allChannels
+          : readJson("m3u_channels", []).map((item) => normalizeChannel(item, "m3u"));
+
+        nextChannels = category.category_id === "__all"
+          ? source
+          : source.filter((channel) => String(channel.category_id) === String(category.category_id));
+      } else if (category.category_id === "__all") {
+        const data = await getLiveStreams(
           iptv.host,
-
           iptv.username,
-
           iptv.password
         );
 
-      setCategories(data || []);
-
-      // FIRST
-      if (
-        data?.length
-      ) {
-
-        loadChannels(
-          data[0]
-            .category_id
-        );
-      }
-
-    } catch (error) {
-
-      console.log(error);
-    }
-  }
-
-  // LOAD CHANNELS
-  async function loadChannels(
-    categoryId
-  ) {
-
-    try {
-
-      const iptv =
-        JSON.parse(
-
-          localStorage.getItem(
-            "iptv"
-          )
-
-        );
-
-      const data =
-        await getLiveStreams(
-
+        nextChannels = (data || []).map((item) => normalizeChannel(item, "xtream"));
+      } else {
+        const data = await getLiveStreams(
           iptv.host,
-
           iptv.username,
-
           iptv.password,
-
-          categoryId
+          category.category_id
         );
 
-      const channelsWithEPG =
-        await Promise.all(
+        nextChannels = (data || []).map((item) => normalizeChannel(item, "xtream"));
+      }
 
-          (data || []).map(
-            async item => {
-
-              const epg =
-                await getEPG(
-
-                  iptv.host,
-
-                  iptv.username,
-
-                  iptv.password,
-
-                  item.stream_id
-                );
-
-              return {
-
-                ...item,
-
-                epg:
-                  epg?.epg_listings
-                  || []
-              };
-            })
-        );
-
-      setChannels(
-        channelsWithEPG
-      );
-
+      setChannels(nextChannels);
+      setAllChannels((prev) => prev.length ? prev : nextChannels);
       setFocusedChannel(0);
+      setQuery("");
 
-    } catch (error) {
-
-      console.log(error);
+      if (!options.skipFocus) {
+        setZone("channels");
+      }
+    } catch (err) {
+      setError(err?.message || "Unable to load channels.");
+    } finally {
+      setLoading(false);
     }
   }
 
-  // REMOTE
-  useEffect(() => {
+  function handleCategoryKeys(event) {
+    switch (event.keyCode) {
+      case KEYS.UP:
+        event.preventDefault();
+        if (focusedCategory > 0) setFocusedCategory((prev) => prev - 1);
+        break;
 
-    function handleKeys(event) {
+      case KEYS.DOWN:
+        event.preventDefault();
+        if (focusedCategory < categories.length - 1) setFocusedCategory((prev) => prev + 1);
+        break;
 
-      // CATEGORY
-      if (
-        zone === "categories"
-      ) {
+      case KEYS.RIGHT:
+        event.preventDefault();
+        setZone("channels");
+        break;
 
-        switch (event.keyCode) {
+      case KEYS.BACK:
+        event.preventDefault();
+        navigateTo(navigationManager.back());
+        break;
 
-          // UP
-          case KEYS.UP:
-
-            if (
-              focusedCategory > 0
-            ) {
-
-              const next =
-                focusedCategory - 1;
-
-              setFocusedCategory(
-                next
-              );
-
-              loadChannels(
-
-                categories[next]
-                  ?.category_id
-              );
-            }
-
-            break;
-
-          // DOWN
-          case KEYS.DOWN:
-
-            if (
-
-              focusedCategory
-              <
-              categories.length - 1
-            ) {
-
-              const next =
-                focusedCategory + 1;
-
-              setFocusedCategory(
-                next
-              );
-
-              loadChannels(
-
-                categories[next]
-                  ?.category_id
-              );
-            }
-
-            break;
-
-          // RIGHT
-          case KEYS.RIGHT:
-
-            setZone(
-              "channels"
-            );
-
-            break;
-
-          // BACK
-          case KEYS.BACK:
-
-            window.location.href =
-              navigationManager.back();
-
-            break;
-
-          default:
-
-            break;
+      default:
+        if (isEnter(event)) {
+          event.preventDefault();
+          selectCategory(categories[focusedCategory]);
         }
-      }
-
-      // CHANNELS
-      else {
-
-        switch (event.keyCode) {
-
-          // UP
-          case KEYS.UP:
-
-            if (
-              focusedChannel > 0
-            ) {
-
-              setFocusedChannel(
-                prev => prev - 1
-              );
-            }
-
-            break;
-
-          // DOWN
-          case KEYS.DOWN:
-
-            if (
-
-              focusedChannel
-              <
-              channels.length - 1
-            ) {
-
-              setFocusedChannel(
-                prev => prev + 1
-              );
-            }
-
-            break;
-
-          // LEFT
-          case KEYS.LEFT:
-
-            setZone(
-              "categories"
-            );
-
-            break;
-
-          // ENTER
-          case KEYS.ENTER:
-
-            openChannel();
-
-            break;
-
-          // BACK
-          case KEYS.BACK:
-
-            window.location.href =
-              navigationManager.back();
-
-            break;
-
-          default:
-
-            break;
-        }
-      }
+        break;
     }
+  }
 
-    document.addEventListener(
-      "keydown",
-      handleKeys
-    );
+  function handleChannelKeys(event) {
+    switch (event.keyCode) {
+      case KEYS.UP:
+        event.preventDefault();
+        if (focusedChannel > 0) setFocusedChannel((prev) => prev - 1);
+        break;
 
-    return () => {
+      case KEYS.DOWN:
+        event.preventDefault();
+        if (focusedChannel < filteredChannels.length - 1) setFocusedChannel((prev) => prev + 1);
+        break;
 
-      document.removeEventListener(
-        "keydown",
-        handleKeys
-      );
-    };
+      case KEYS.LEFT:
+        event.preventDefault();
+        setZone("categories");
+        break;
 
-  }, [
+      case KEYS.YELLOW:
+        event.preventDefault();
+        toggleCurrentFavorite();
+        break;
 
-    focusedCategory,
+      case KEYS.BACK:
+        event.preventDefault();
+        setZone("categories");
+        break;
 
-    focusedChannel,
+      default:
+        if (isEnter(event)) {
+          event.preventDefault();
+          openChannel();
+        }
+        break;
+    }
+  }
 
-    zone,
-
-    categories,
-
-    channels
-  ]);
-
-  // OPEN
-  function openChannel() {
-
-    const channel =
-      channels[focusedChannel];
-
+  function toggleCurrentFavorite() {
+    const channel = filteredChannels[focusedChannel];
     if (!channel) return;
 
-    localStorage.setItem(
-      "stream_id",
-      channel.stream_id
-    );
+    toggleFavorite(channel);
+    setChannels((prev) => [...prev]);
+  }
 
-    localStorage.setItem(
-      "stream_name",
-      channel.name
-    );
+  function openChannel(channel = filteredChannels[focusedChannel]) {
+    if (!channel) return;
 
-    localStorage.setItem(
-      "stream_icon",
-      channel.stream_icon
-    );
+    localStorage.setItem("stream_id", channel.stream_id);
+    localStorage.setItem("stream_name", channel.name);
+    localStorage.setItem("stream_icon", channel.stream_icon || "");
+    localStorage.setItem("stream_type", "live");
+    localStorage.setItem("stream_url", channel.stream_url || "");
+    localStorage.setItem("active_channel", JSON.stringify(channel));
+    localStorage.setItem("live_channels", JSON.stringify(filteredChannels));
 
-    localStorage.setItem(
-      "stream_type",
-      "live"
-    );
-
-    navigationManager.push(
-      "/live"
-    );
-
-    window.location.href =
-      "/player";
+    saveRecentChannel(channel);
+    navigationManager.push("/live");
+    navigateTo("/player");
   }
 
   return (
-
-    <div style={{
-      width: "100%",
-      height: "100vh",
-      display: "flex",
-      background:
-        "#000",
-      color: "white",
-      overflow:
-        "hidden"
-    }}>
-
-      {/* CATEGORIES */}
-
-      <div style={{
-        width: "340px",
-        height: "100%",
-        background:
-          "#111",
-        overflowY:
-          "auto",
-        padding:
-          "20px"
-      }}>
-
-        {/* TITLE */}
-
-        <div style={{
-          fontSize: "40px",
-          fontWeight: "bold",
-          marginBottom: "30px",
-          color: "#00aaff"
-        }}>
-
-          LIVE TV
-
+    <main className="live-tv-page">
+      <aside className="live-category-panel">
+        <div className="live-panel-title">
+          <span>Live TV</span>
+          <strong>{categories.length}</strong>
         </div>
 
-        {
-          categories.map(
-            (item, index) => (
-
-            <div
-              key={
-                item.category_id
+        <div className="category-list">
+          {categories.map((item, index) => (
+            <button
+              type="button"
+              key={`${item.category_id}-${index}`}
+              data-category-index={index}
+              className={
+                zone === "categories" && focusedCategory === index
+                  ? "category-row active"
+                  : "category-row"
               }
-              style={{
-
-                padding:
-                  "20px",
-
-                borderRadius:
-                  "16px",
-
-                marginBottom:
-                  "16px",
-
-                background:
-                  zone ===
-                  "categories"
-                  &&
-                  focusedCategory
-                  === index
-                    ? "#00aaff"
-                    : "#1d1d1d",
-
-                border:
-                  zone ===
-                  "categories"
-                  &&
-                  focusedCategory
-                  === index
-                    ? "3px solid white"
-                    : "3px solid transparent",
-
-                fontSize:
-                  "24px",
-
-                fontWeight:
-                  "bold",
-
-                transition:
-                  "all 0.2s ease"
+              onFocus={() => {
+                setFocusedCategory(index);
+                setZone("categories");
+              }}
+              onClick={() => {
+                setFocusedCategory(index);
+                selectCategory(item);
               }}
             >
-
-              {
-                item.category_name
-              }
-
-            </div>
-
-          ))
-        }
-
-      </div>
-
-      {/* CHANNELS */}
-
-      <div style={{
-        flex: 1,
-        overflowY: "auto",
-        padding: "30px"
-      }}>
-
-        {/* TITLE */}
-
-        <div style={{
-          fontSize: "42px",
-          fontWeight: "bold",
-          marginBottom: "30px"
-        }}>
-
-          CHANNELS
-
+              <span>{item.category_name}</span>
+            </button>
+          ))}
         </div>
+      </aside>
 
-        {/* LIST */}
+      <section className="live-channel-panel">
+        <header className="live-header">
+          <div>
+            <h1>{categories[focusedCategory]?.category_name || "Channels"}</h1>
+            <p>{filteredChannels.length} channels</p>
+          </div>
 
-        <div style={{
-          display: "flex",
-          flexDirection:
-            "column",
-          gap: "18px"
-        }}>
+          <label className="channel-search">
+            <span>Search</span>
+            <input
+              value={query}
+              placeholder="Channel name"
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setFocusedChannel(0);
+              }}
+            />
+          </label>
+        </header>
 
-          {
-            channels.map(
-              (channel, index) => (
+        {error ? <div className="live-state error">{error}</div> : null}
+        {loading ? <div className="live-state">Loading...</div> : null}
 
-              <div
-                key={
-                  channel.stream_id
-                }
-                style={{
+        {!loading && !error && (
+          <div className="channel-list">
+            {filteredChannels.map((channel, index) => {
+              const favorite = getFavorites().some((item) => (
+                String(item.stream_id) === String(channel.stream_id)
+              ));
 
-                  display: "flex",
-
-                  gap: "20px",
-
-                  padding:
-                    "18px",
-
-                  borderRadius:
-                    "18px",
-
-                  background:
-                    zone ===
-                    "channels"
-                    &&
-                    focusedChannel
-                    === index
-                      ? "#00aaff"
-                      : "#1d1d1d",
-
-                  border:
-                    zone ===
-                    "channels"
-                    &&
-                    focusedChannel
-                    === index
-                      ? "3px solid white"
-                      : "2px solid rgba(255,255,255,0.08)",
-
-                  transition:
-                    "all 0.2s ease"
-                }}
-              >
-
-                {/* LOGO */}
-
-                <img
-                  src={
-                    channel.stream_icon
+              return (
+                <div
+                  role="button"
+                  tabIndex={0}
+                  key={`${channel.stream_id}-${index}`}
+                  data-channel-index={index}
+                  className={
+                    zone === "channels" && focusedChannel === index
+                      ? "channel-row active"
+                      : "channel-row"
                   }
-                  alt=""
-                  style={{
-                    width: "110px",
-                    height: "110px",
-                    borderRadius:
-                      "16px",
-                    objectFit:
-                      "cover",
-                    background:
-                      "#000"
+                  onFocus={() => {
+                    setFocusedChannel(index);
+                    setZone("channels");
                   }}
-                />
-
-                {/* INFO */}
-
-                <div style={{
-                  flex: 1
-                }}>
-
-                  {/* NAME */}
-
-                  <div style={{
-                    fontSize: "28px",
-                    fontWeight: "bold",
-                    marginBottom:
-                      "12px"
-                  }}>
-
-                    {
-                      channel.name
-                    }
-
+                  onClick={() => openChannel(channel)}
+                >
+                  <div className="channel-logo">
+                    {channel.stream_icon ? <img src={channel.stream_icon} alt="" /> : <span>TV</span>}
                   </div>
 
-                  {/* EPG */}
-
-                  <div style={{
-                    fontSize: "20px",
-                    opacity: 0.78
-                  }}>
-
-                    {
-                      channel.epg?.[0]
-                        ?.title
-                      ||
-                      "No EPG Available"
-                    }
-
+                  <div className="channel-main">
+                    <strong>{channel.name}</strong>
+                    <span>{channel.category_name}</span>
                   </div>
 
+                  <button
+                    type="button"
+                    className={favorite ? "fav-btn active" : "fav-btn"}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      toggleFavorite(channel);
+                      setChannels((prev) => [...prev]);
+                    }}
+                    aria-label="Toggle favorite"
+                  >
+                    {favorite ? "Saved" : "Save"}
+                  </button>
                 </div>
+              );
+            })}
 
-              </div>
-
-            ))
-          }
-
-        </div>
-
-      </div>
-
-    </div>
+            {!filteredChannels.length ? <div className="live-state">No channels</div> : null}
+          </div>
+        )}
+      </section>
+    </main>
   );
 }

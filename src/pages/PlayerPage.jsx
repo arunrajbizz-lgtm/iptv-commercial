@@ -1,3 +1,4 @@
+import { navigateTo } from "../utils/navigation";
 import {
   useEffect,
   useState
@@ -84,7 +85,7 @@ export default function PlayerPage() {
     setStreamName] =
     useState("");
 
-  const [streamUrl,
+  const [,
     setStreamUrl] =
     useState("");
 
@@ -140,6 +141,11 @@ export default function PlayerPage() {
           "stream_type"
         );
 
+      const storedStreamUrl =
+        localStorage.getItem(
+          "stream_url"
+        );
+
       const name =
         localStorage.getItem(
           "stream_name"
@@ -183,6 +189,15 @@ export default function PlayerPage() {
 
       // LIVE
       if (
+        storedStreamUrl
+      ) {
+
+        url =
+          storedStreamUrl;
+      }
+
+      // LIVE
+      else if (
         streamType === "live"
       ) {
 
@@ -339,8 +354,7 @@ export default function PlayerPage() {
 
           avplayManager.stop();
 
-          window.location.href =
-            navigationManager.back();
+          navigateTo(navigationManager.back());
 
           break;
 
@@ -403,8 +417,7 @@ export default function PlayerPage() {
 
           avplayManager.stop();
 
-          window.location.href =
-            navigationManager.back();
+          navigateTo(navigationManager.back());
 
           break;
 

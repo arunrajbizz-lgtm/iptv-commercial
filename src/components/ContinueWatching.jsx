@@ -1,3 +1,4 @@
+import { navigateTo } from "../utils/navigation";
 import {
   useEffect,
   useState
@@ -57,8 +58,7 @@ export default function ContinueWatching() {
       item.type
     );
 
-    window.location.href =
-      "/player";
+    navigateTo("/player");
   }
 
   // EMPTY

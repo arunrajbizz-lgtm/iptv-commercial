@@ -1,3 +1,4 @@
+import { navigateTo } from "../utils/navigation";
 import {
   useEffect,
   useState
@@ -175,8 +176,7 @@ export default function SettingsPage() {
 
         case KEYS.BACK:
 
-          window.location.href =
-            "/dashboard";
+          navigateTo("/dashboard");
 
           break;
 
@@ -314,8 +314,7 @@ export default function SettingsPage() {
 
       localStorage.clear();
 
-      window.location.href =
-        "/login";
+      navigateTo("/login");
     }
   }
 

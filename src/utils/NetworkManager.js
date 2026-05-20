@@ -72,8 +72,7 @@ class NetworkManager {
 
     try {
 
-      const response =
-        await fetch(
+      await fetch(
 
           "https://www.google.com",
 
@@ -84,7 +83,7 @@ class NetworkManager {
 
       return true;
 
-    } catch (error) {
+    } catch {
 
       return false;
     }

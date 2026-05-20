@@ -1,3 +1,4 @@
+import { navigateTo } from "../utils/navigation";
 import {
   useEffect,
   useState
@@ -59,8 +60,7 @@ export default function RecentChannels() {
       "live"
     );
 
-    window.location.href =
-      "/player";
+    navigateTo("/player");
   }
 
   // EMPTY

@@ -1,3 +1,4 @@
+import { navigateTo } from "../utils/navigation";
 import {
   useEffect,
   useState
@@ -163,8 +164,7 @@ export default function SearchPage() {
 
         case KEYS.BACK:
 
-          window.location.href =
-            "/dashboard";
+          navigateTo("/dashboard");
 
           break;
 
@@ -212,8 +212,7 @@ export default function SearchPage() {
         JSON.stringify(item)
       );
 
-      window.location.href =
-        "/series-info";
+      navigateTo("/series-info");
 
       return;
     }
@@ -234,8 +233,7 @@ export default function SearchPage() {
       item.type
     );
 
-    window.location.href =
-      "/player";
+    navigateTo("/player");
   }
 
   return (

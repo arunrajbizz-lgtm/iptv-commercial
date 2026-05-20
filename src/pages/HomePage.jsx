@@ -1,3 +1,4 @@
+import { navigateTo } from "../utils/navigation";
 import {
   useEffect,
   useState
@@ -460,16 +461,14 @@ export default function HomePage() {
             "/dashboard"
           );
 
-          window.location.href =
-            "/player";
+          navigateTo("/player");
 
           break;
 
         // BACK
         case KEYS.BACK:
 
-          window.location.href =
-            "/dashboard";
+          navigateTo("/dashboard");
 
           break;
 
@@ -781,8 +780,7 @@ export default function HomePage() {
             "/dashboard"
           );
 
-          window.location.href =
-            "/player";
+          navigateTo("/player");
         }}
       />
 

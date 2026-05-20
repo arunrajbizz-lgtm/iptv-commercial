@@ -1,3 +1,4 @@
+import { navigateTo } from "../utils/navigation";
 import {
   useEffect,
   useState
@@ -133,8 +134,7 @@ export default function SeriesInfoPage() {
 
         case KEYS.BACK:
 
-          window.location.href =
-            "/series";
+          navigateTo("/series");
 
           break;
 
@@ -185,8 +185,7 @@ export default function SeriesInfoPage() {
       "series"
     );
 
-    window.location.href =
-      "/player";
+    navigateTo("/player");
   }
 
   // EMPTY

@@ -83,7 +83,7 @@ export function registerTizenKeys() {
             .tvinputdevice
             .registerKey(key);
 
-        } catch (error) {
+        } catch {
 
           console.log(
             "KEY REGISTER ERROR",
@@ -132,7 +132,9 @@ export function registerRemoteKeys() {
       keys.forEach(function (key) {
         try {
           window.tizen.tvinputdevice.registerKey(key);
-        } catch (e) {}
+        } catch {
+          // Some TV models do not expose every optional key.
+        }
       });
     }
   } catch (e) {

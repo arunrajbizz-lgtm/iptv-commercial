@@ -176,6 +176,8 @@ export default function Sidebar({
                   &&
                 focusManager.getZone()
                   === "sidebar"
+                  ||
+                active === item
                     ? "#00aaff"
                     : "transparent",
 
@@ -184,6 +186,8 @@ export default function Sidebar({
                   &&
                 focusManager.getZone()
                   === "sidebar"
+                  ||
+                active === item
                     ? "6px solid white"
                     : "6px solid transparent",
 

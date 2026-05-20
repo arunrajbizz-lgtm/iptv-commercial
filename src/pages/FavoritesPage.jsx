@@ -1,3 +1,4 @@
+import { navigateTo } from "../utils/navigation";
 import {
   useEffect,
   useState
@@ -92,8 +93,7 @@ export default function FavoritesPage() {
 
         case KEYS.BACK:
 
-          window.location.href =
-            "/dashboard";
+          navigateTo("/dashboard");
 
           break;
 
@@ -141,8 +141,7 @@ export default function FavoritesPage() {
         JSON.stringify(item)
       );
 
-      window.location.href =
-        "/series-info";
+      navigateTo("/series-info");
 
       return;
     }
@@ -163,8 +162,7 @@ export default function FavoritesPage() {
       item.type
     );
 
-    window.location.href =
-      "/player";
+    navigateTo("/player");
   }
 
   // REMOVE

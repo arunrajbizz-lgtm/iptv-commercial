@@ -1,6 +1,24 @@
 const PLAYER_API =
   "/player_api.php";
 
+export function normalizeXtreamHost(host) {
+  let fixedHost = String(host || "").trim();
+
+  if (!fixedHost) {
+    return "";
+  }
+
+  if (!/^https?:\/\//i.test(fixedHost)) {
+    fixedHost = `http://${fixedHost}`;
+  }
+
+  fixedHost = fixedHost
+    .replace(/\/player_api\.php.*$/i, "")
+    .replace(/\/+$/, "");
+
+  return fixedHost;
+}
+
 // REQUEST
 async function apiRequest(
   host,
@@ -11,35 +29,12 @@ async function apiRequest(
 
   try {
 
-    // FIX HOST
-    let fixedHost =
-      host.trim();
-
-    if (
-      !fixedHost.startsWith(
-        "http"
-      )
-    ) {
-
-      fixedHost =
-        `http://${fixedHost}`;
-    }
-
-    // REMOVE /
-    fixedHost =
-      fixedHost.replace(
-        /\/$/,
-        ""
-      );
+    const fixedHost =
+      normalizeXtreamHost(host);
 
     const url =
 
-      `${fixedHost}${PLAYER_API}?username=${username}&password=${password}${action}`;
-
-    console.log(
-      "XTREAM URL:",
-      url
-    );
+      `${fixedHost}${PLAYER_API}?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}${action}`;
 
     const response =
       await fetch(url, {
@@ -65,11 +60,6 @@ async function apiRequest(
     const data =
       await response.json();
 
-    console.log(
-      "XTREAM RESPONSE:",
-      data
-    );
-
     return data;
 
   } catch (error) {
@@ -79,7 +69,7 @@ async function apiRequest(
       error
     );
 
-    return null;
+    throw error;
   }
 }
 
@@ -102,13 +92,33 @@ export async function testXtreamLogin(
         password
       );
 
-    return !!data?.user_info;
+    const userInfo =
+      data?.user_info;
+
+    const authenticated =
+      userInfo?.auth === 1
+      ||
+      userInfo?.auth === "1";
+
+    return {
+      ok: !!authenticated,
+      data,
+      message:
+        authenticated
+          ? ""
+          : userInfo?.message || "Invalid username, password, or server URL"
+    };
 
   } catch (error) {
 
-    console.log(error);
-
-    return false;
+    return {
+      ok: false,
+      data: null,
+      message:
+        error?.message
+        ||
+        "Unable to connect. Check CORS/mixed-content rules on your hosted server."
+    };
   }
 }
 
@@ -139,8 +149,12 @@ export async function getLiveStreams(
   host,
   username,
   password,
-  categoryId
+  categoryId = ""
 ) {
+  const categoryQuery =
+    categoryId
+      ? `&category_id=${encodeURIComponent(categoryId)}`
+      : "";
 
   const data =
     await apiRequest(
@@ -151,7 +165,7 @@ export async function getLiveStreams(
 
       password,
 
-      `&action=get_live_streams&category_id=${categoryId}`
+      `&action=get_live_streams${categoryQuery}`
     );
 
   // SAVE
@@ -307,7 +321,7 @@ export function buildLiveUrl(
 ) {
 
   const fixedHost =
-    host.replace(/\/$/, "");
+    normalizeXtreamHost(host);
 
   return (
 
@@ -325,7 +339,7 @@ export function buildMovieUrl(
 ) {
 
   const fixedHost =
-    host.replace(/\/$/, "");
+    normalizeXtreamHost(host);
 
   return (
 
@@ -343,7 +357,7 @@ export function buildSeriesUrl(
 ) {
 
   const fixedHost =
-    host.replace(/\/$/, "");
+    normalizeXtreamHost(host);
 
   return (
 

@@ -83,7 +83,9 @@ class AVPlayManager {
 
           this.player.stop();
 
-        } catch (e) {}
+        } catch {
+          // Ignore stop errors before opening a new stream.
+        }
 
         // OPEN
         this.player.open(url);

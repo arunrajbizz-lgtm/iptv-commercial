@@ -1,3 +1,4 @@
+import { navigateTo } from "../utils/navigation";
 import {
   useEffect,
   useState
@@ -109,8 +110,7 @@ export default function RecommendedRow() {
         JSON.stringify(item)
       );
 
-      window.location.href =
-        "/series-info";
+      navigateTo("/series-info");
 
       return;
     }
@@ -137,8 +137,7 @@ export default function RecommendedRow() {
       || item.cover
     );
 
-    window.location.href =
-      "/player";
+    navigateTo("/player");
   }
 
   // EMPTY

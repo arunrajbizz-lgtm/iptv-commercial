@@ -1,3 +1,4 @@
+import { navigateTo } from "../utils/navigation";
 import {
   useEffect,
   useState
@@ -298,8 +299,7 @@ export default function SeriesPage() {
       JSON.stringify(item)
     );
 
-    window.location.href =
-      "/series-info";
+    navigateTo("/series-info");
   }
 
   return (

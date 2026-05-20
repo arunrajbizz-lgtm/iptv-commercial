@@ -1,3 +1,4 @@
+import { navigateTo } from "../utils/navigation";
 import {
   useEffect,
   useState
@@ -311,8 +312,7 @@ export default function MoviesPage() {
       movie.stream_icon
     );
 
-    window.location.href =
-      "/player";
+    navigateTo("/player");
   }
 
   return (

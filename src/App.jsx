@@ -1,7 +1,5 @@
-import React from "react";
-
 import {
-  BrowserRouter,
+  HashRouter,
   Routes,
   Route,
   Navigate
@@ -42,17 +40,23 @@ from "./pages/SettingsPage";
 export default function App() {
 
   // LOGIN
-  const iptv =
-    JSON.parse(
+  let iptv = null;
 
+  try {
+    iptv = JSON.parse(
       localStorage.getItem(
         "iptv"
       )
     );
+  } catch {
+    localStorage.removeItem(
+      "iptv"
+    );
+  }
 
   return (
 
-    <BrowserRouter>
+    <HashRouter>
 
       <Routes>
 
@@ -175,6 +179,6 @@ export default function App() {
 
       </Routes>
 
-    </BrowserRouter>
+    </HashRouter>
   );
 }
