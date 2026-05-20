@@ -11,187 +11,141 @@ import {
   buildLiveUrl
 } from "../services/xtreamApi";
 
+import {
+  playWithTizenAVPlay,
+  stopTizenAVPlay
+} from "../utils/tizenPlayer";
+
 export default function MultiView({
-
   visible,
-
   channels,
-
   onClose
 }) {
+  const [selected, setSelected] = useState([]);
+  const [focused, setFocused] = useState(0);
 
-  const [selected,
-    setSelected] =
-    useState([]);
-
-  const [focused,
-    setFocused] =
-    useState(0);
-
-  // INIT
   useEffect(() => {
-
     if (!visible) return;
 
-    setSelected(
-      channels.slice(0, 4)
-    );
+    setSelected(channels.slice(0, 4));
+  }, [visible, channels]);
 
-  }, [
-    visible,
-    channels
-  ]);
-
-  // REMOTE
   useEffect(() => {
-
     if (!visible) return;
 
     function handleKeys(event) {
-
       switch (event.keyCode) {
-
-        // LEFT
         case KEYS.LEFT:
-
-          if (
-            focused > 0
-          ) {
-
-            setFocused(
-              prev => prev - 1
-            );
-          }
-
+          if (focused > 0) setFocused(prev => prev - 1);
           break;
 
-        // RIGHT
         case KEYS.RIGHT:
-
-          if (
-            focused < 3
-          ) {
-
-            setFocused(
-              prev => prev + 1
-            );
-          }
-
+          if (focused < selected.length - 1) setFocused(prev => prev + 1);
           break;
 
-        // BACK
         case KEYS.BACK:
-
         case KEYS.YELLOW:
-
+          stopTizenAVPlay();
           onClose();
-
           break;
 
         default:
-
           break;
       }
     }
 
-    document.addEventListener(
-      "keydown",
-      handleKeys
-    );
+    document.addEventListener("keydown", handleKeys);
 
     return () => {
-
-      document.removeEventListener(
-        "keydown",
-        handleKeys
-      );
+      document.removeEventListener("keydown", handleKeys);
     };
+  }, [visible, focused, selected.length, onClose]);
 
-  }, [
-    visible,
-    focused
-  ]);
+  useEffect(() => {
+    if (!visible) {
+      stopTizenAVPlay();
+      return;
+    }
 
-  // HIDE
-  if (!visible) {
+    const iptv = JSON.parse(localStorage.getItem("iptv") || "{}");
+    const channel = selected[focused];
 
-    return null;
-  }
+    if (!channel || !iptv.host) return;
 
-  // IPTV
-  const iptv =
-    JSON.parse(
-
-      localStorage.getItem(
-        "iptv"
-      )
+    const url = buildLiveUrl(
+      iptv.host,
+      iptv.username,
+      iptv.password,
+      channel.stream_id,
+      "ts"
     );
 
-  return (
+    const timer = setTimeout(() => {
+      playWithTizenAVPlay(url, "avplay-container");
+    }, 300);
 
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [visible, selected, focused]);
+
+  if (!visible) return null;
+
+  const iptv = JSON.parse(localStorage.getItem("iptv") || "{}");
+
+  return (
     <div style={{
       position: "absolute",
       top: 0,
       left: 0,
       width: "100%",
       height: "100%",
-      background:
-        "#000",
+      background: "#000",
       zIndex: 999999,
       display: "grid",
-      gridTemplateColumns:
-        "1fr 1fr",
-      gridTemplateRows:
-        "1fr 1fr",
+      gridTemplateColumns: "1fr 1fr",
+      gridTemplateRows: "1fr 1fr",
       gap: "6px",
       padding: "6px"
     }}>
+      <div
+        id="avplay-container"
+        style={{
+          position: "absolute",
+          top: "6px",
+          left: "6px",
+          width: "calc(50% - 9px)",
+          height: "calc(50% - 9px)",
+          background: "#000",
+          zIndex: 1
+        }}
+      />
 
-      {
-        selected.map(
-          (channel, index) => {
+      {selected.map((channel, index) => {
+        const url = buildLiveUrl(
+          iptv.host,
+          iptv.username,
+          iptv.password,
+          channel.stream_id,
+          "ts"
+        );
 
-          const url =
-            buildLiveUrl(
-
-              iptv.host,
-
-              iptv.username,
-
-              iptv.password,
-
-              channel.stream_id
-            );
-
-          return (
-
-            <div
-              key={
-                channel.stream_id
-              }
-              style={{
-
-                position:
-                  "relative",
-
-                border:
-                  focused === index
-                    ? "4px solid #00aaff"
-                    : "2px solid #222",
-
-                overflow:
-                  "hidden",
-
-                borderRadius:
-                  "12px",
-
-                background:
-                  "#000"
-              }}
-            >
-
-              {/* VIDEO */}
-
+        return (
+          <div
+            key={channel.stream_id}
+            style={{
+              position: "relative",
+              border:
+                focused === index
+                  ? "4px solid #00aaff"
+                  : "2px solid #222",
+              overflow: "hidden",
+              borderRadius: "12px",
+              background: "#000",
+              zIndex: 2
+            }}
+          >
+            {focused !== index && (
               <video
                 src={url}
                 autoPlay
@@ -201,47 +155,33 @@ export default function MultiView({
                 style={{
                   width: "100%",
                   height: "100%",
-                  objectFit:
-                    "cover",
-                  background:
-                    "#000"
+                  objectFit: "cover",
+                  background: "#000"
                 }}
               />
+            )}
 
-              {/* OVERLAY */}
-
+            <div style={{
+              position: "absolute",
+              left: 0,
+              bottom: 0,
+              width: "100%",
+              padding: "14px",
+              background:
+                "linear-gradient(to top, rgba(0,0,0,0.9), transparent)",
+              zIndex: 5
+            }}>
               <div style={{
-                position:
-                  "absolute",
-                left: 0,
-                bottom: 0,
-                width: "100%",
-                padding: "14px",
-                background:
-                  "linear-gradient(to top, rgba(0,0,0,0.9), transparent)"
+                fontSize: "22px",
+                fontWeight: "bold",
+                color: "white"
               }}>
-
-                <div style={{
-                  fontSize: "22px",
-                  fontWeight:
-                    "bold",
-                  color:
-                    "white"
-                }}>
-
-                  {
-                    channel.name
-                  }
-
-                </div>
-
+                {channel.name}
               </div>
-
             </div>
-          );
-        })
-      }
-
+          </div>
+        );
+      })}
     </div>
   );
 }
