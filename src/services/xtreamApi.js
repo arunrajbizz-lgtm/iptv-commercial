@@ -32,10 +32,14 @@ async function apiRequest(
     const fixedHost =
       normalizeXtreamHost(host);
 
-    const url =
+   const isLocal =
+  window.location.hostname === "localhost" ||
+  window.location.hostname === "127.0.0.1";
 
-      `${fixedHost}${PLAYER_API}?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}${action}`;
-
+const url = isLocal
+  ? `${fixedHost}${PLAYER_API}?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}${action}`
+  : `/api/xtream?host=${encodeURIComponent(fixedHost)}&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}&action=${action}`;
+  
     const response =
       await fetch(url, {
 
