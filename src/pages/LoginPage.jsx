@@ -151,11 +151,28 @@ export default function LoginPage() {
           throw new Error("Enter server URL, username, and password.");
         }
 
-        const result = await testXtreamLogin(host, username, password);
+        if (mode === 0) {
+  const host = normalizeXtreamHost(form.host);
+  const username = form.username.trim();
+  const password = form.password.trim();
 
-        if (!result.ok) {
-          throw new Error(result.message || "Xtream login failed.");
-        }
+  if (!host || !username || !password) {
+    throw new Error("Enter server URL, username, and password.");
+  }
+
+  localStorage.setItem(
+    "iptv",
+    JSON.stringify({
+      type: "xtream",
+      host,
+      username,
+      password
+    })
+  );
+
+  navigateTo("/dashboard");
+  return;
+}
 
         localStorage.setItem(
           "iptv",
