@@ -202,9 +202,26 @@
 }
 
 .field-row:focus-within,
-.tv-focused {
+.field-row.focused,
+.tv-focused,
+.mode-tab.focused,
+.login-submit.focused {
   border-color: #ffffff !important;
   box-shadow: 0 0 0 3px rgba(30, 214, 255, 0.32), 0 0 34px rgba(15, 184, 255, 0.34);
+  outline: none;
+}
+
+.mode-tab.focused {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.mode-tab.active.focused {
+  background: linear-gradient(135deg, #30c2ff, #2b7fff);
+}
+
+.login-submit.focused {
+  background: linear-gradient(135deg, #33ccff, #1a75ff);
+  transform: scale(1.02);
 }
 
 .login-submit {

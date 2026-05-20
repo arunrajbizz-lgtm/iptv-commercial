@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { navigateTo } from "../utils/navigation";
 import { loadM3U } from "../utils/M3UParser";
 import { KEYS } from "../utils/tizenRemote";
@@ -50,6 +50,10 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const inputRefs = useRef([]);
+  const submitRef = useRef(null);
+  const modeRefs = useRef([]);
+
   const [form, setForm] = useState({
     host: "",
     username: "",
@@ -58,21 +62,25 @@ export default function LoginPage() {
   });
 
   const fields = useMemo(
-    () => mode === 0 ? ["host", "username", "password"] : ["m3u"],
+    () => (mode === 0 ? ["host", "username", "password"] : ["m3u"]),
     [mode]
   );
+
+  // Focus effect
+  useEffect(() => {
+    if (focused === 0) {
+      modeRefs.current[mode]?.focus();
+    } else if (focused <= fields.length) {
+      inputRefs.current[focused - 1]?.focus();
+    } else if (focused === fields.length + 1) {
+      submitRef.current?.focus();
+    }
+  }, [focused, mode, fields.length]);
 
   useEffect(() => {
     function handleKeys(event) {
       const active = document.activeElement;
-
-      if (
-        active
-        &&
-        (active.tagName === "INPUT" || active.tagName === "TEXTAREA")
-      ) {
-        return;
-      }
+      const isInput = active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA");
 
       switch (event.keyCode) {
         case KEYS.LEFT:
@@ -241,8 +249,11 @@ export default function LoginPage() {
           {MODES.map((item, index) => (
             <button
               key={item.id}
+              ref={(el) => (modeRefs.current[index] = el)}
               type="button"
-              className={mode-tab  }
+              className={`mode-tab ${mode === index ? "active" : ""} ${
+                focused === 0 && mode === index ? "focused" : ""
+              }`}
               onClick={() => selectMode(index)}
               onFocus={() => setFocused(0)}
               role="tab"
@@ -262,10 +273,11 @@ export default function LoginPage() {
             return (
               <label
                 key={field}
-                className={ield-row }
+                className={`field-row ${focused === focusIndex ? "focused" : ""}`}
               >
                 <span>{meta.label}</span>
                 <input
+                  ref={(el) => (inputRefs.current[index] = el)}
                   type={meta.type}
                   value={form[field]}
                   placeholder={meta.placeholder}
@@ -280,8 +292,11 @@ export default function LoginPage() {
           {error ? <div className="login-error">{error}</div> : null}
 
           <button
+            ref={submitRef}
             type="button"
-            className={login-submit }
+            className={`login-submit ${
+              focused === fields.length + 1 ? "focused" : ""
+            }`}
             onFocus={() => setFocused(fields.length + 1)}
             onClick={handleLogin}
             disabled={loading}
@@ -289,7 +304,6 @@ export default function LoginPage() {
             {loading ? "Connecting..." : "Connect"}
           </button>
         </div>
-
       </section>
     </main>
   );

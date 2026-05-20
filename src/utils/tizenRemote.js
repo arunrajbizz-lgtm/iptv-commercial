@@ -1,38 +1,24 @@
 export const KEYS = {
-
   LEFT: 37,
-
   UP: 38,
-
   RIGHT: 39,
-
   DOWN: 40,
-
   ENTER: 13,
-
   BACK: 10009,
-
   EXIT: 10182,
-
   PLAY: 415,
-
   PAUSE: 19,
-
   STOP: 413,
-
   FF: 417,
-
   REWIND: 412,
-
   RED: 403,
-
   GREEN: 404,
-
   YELLOW: 405,
-
   BLUE: 406,
-
-  INFO: 457
+  INFO: 457,
+  CH_UP: 427,
+  CH_DOWN: 428,
+  GUIDE: 458
 };
 
 // REGISTER
