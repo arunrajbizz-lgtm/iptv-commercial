@@ -59,10 +59,12 @@ class AVPlayManager {
         }
 
         // OPEN
+        console.log("AVPlay Opening:", url);
         this.player.open(url);
 
+        // --- PROPERTIES MUST BE SET AFTER OPEN BUT BEFORE PREPARE ---
+
         // DISPLAY
-        // Use container rect for better accuracy, fallback to 1080p
         let rect = { left: 0, top: 0, width: 1920, height: 1080 };
         if (this.container) {
           rect = this.container.getBoundingClientRect();
@@ -75,21 +77,45 @@ class AVPlayManager {
           Math.round(rect.height)
         );
 
-        // Common Tizen properties for better compatibility
+        // OPTIMIZATIONS
         try {
-          this.player.setStreamingProperty("ADAPTIVE_INFO", "BITRATES=2000~100000|STARTBITRATE=LOWEST");
-        } catch (e) { console.log("Set ADAPTIVE_INFO error", e); }
+          const isHLS = url.includes(".m3u8");
+          const isTS = url.includes("/live/") || url.endsWith(".ts");
 
-        try {
-          this.player.setDisplayMethod("PLAYER_DISPLAY_MODE_AUTO_ASPECT_RATIO");
-        } catch (e) { console.log("Set DisplayMethod error", e); }
+          // 1. Adaptive Bitrate Logic
+          // STARTBITRATE=HIGHEST avoids blurry starts on good connections
+          // BITRATES range expanded to support 4K (up to 100Mbps)
+          let adaptiveConf = "BITRATES=1000~100000|STARTBITRATE=HIGHEST|SKIPBITRATE=HIGHEST";
+          
+          // 2. 4K/UHD Support
+          // We set max resolution to 4K to ensure decoder allocation is sufficient
+          adaptiveConf += "|FIXED_MAX_RESOLUTION=3840X2160";
+          
+          this.player.setStreamingProperty("ADAPTIVE_INFO", adaptiveConf);
+
+          // 3. Live Optimization
+          if (isHLS || isTS) {
+            this.player.setStreamingProperty("IS_LIVE", "true");
+          }
+
+          // 4. Set 4K mode for older Tizen versions
+          this.player.setStreamingProperty("SET_MODE_4K", "true");
+
+          // 5. Detailed Error Listening
+          this.player.setStreamingProperty("LISTEN_SP_ERROR", "true");
+
+        } catch (e) {
+          console.log("Set Streaming Property Error:", e);
+        }
 
         // BUFFER
-        this.player.setBufferingParam(
-          "PLAYER_BUFFER_FOR_PLAY",
-          "PLAYER_BUFFER_SIZE_IN_SECOND",
-          3
-        );
+        // Increased buffers for IPTV stability (5s to start, 10s for resume)
+        try {
+          this.player.setBufferingParam("PLAYER_BUFFER_FOR_PLAY", "PLAYER_BUFFER_SIZE_IN_SECOND", 5);
+          this.player.setBufferingParam("PLAYER_BUFFER_FOR_RESUME", "PLAYER_BUFFER_SIZE_IN_SECOND", 10);
+        } catch (e) {
+          console.log("Set Buffer Error:", e);
+        }
 
         // LISTENER
         this.player.setListener({
@@ -97,7 +123,7 @@ class AVPlayManager {
             console.log("Buffering Start");
           },
           onbufferingprogress: (percent) => {
-            console.log("Buffer:", percent);
+            console.log("Buffer Progress:", percent);
           },
           onbufferingcomplete: () => {
             console.log("Buffer Complete");
@@ -106,7 +132,7 @@ class AVPlayManager {
             console.log("Stream End");
           },
           onerror: (error) => {
-            console.log("AVPlay Error", error);
+            console.error("AVPlay Error Event:", error);
             this.handleError(url);
           }
         });
@@ -114,11 +140,11 @@ class AVPlayManager {
         // PREPARE
         this.player.prepareAsync(
           () => {
+            console.log("AVPlay Prepared, starting playback");
             this.player.play();
-            console.log("Playback Started");
           },
           (error) => {
-            console.log("Prepare Error", error);
+            console.error("AVPlay Prepare Error:", error);
             this.handleError(url);
           }
         );
@@ -130,7 +156,7 @@ class AVPlayManager {
       this.createHTML5Player(url);
       return true;
     } catch (error) {
-      console.log("Play Error", error);
+      console.log("AVPlay Play Exception:", error);
       this.handleError(url);
       return false;
     }
@@ -139,7 +165,7 @@ class AVPlayManager {
   handleError(url) {
     if (!this.retryAttempted) {
       const retryUrl = this.switchProtocol(url);
-      console.log("Retrying with protocol switch:", retryUrl);
+      console.log("Retrying playback with protocol switch:", retryUrl);
       this.play(retryUrl, false);
     }
   }
