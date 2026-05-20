@@ -36,10 +36,9 @@ async function apiRequest(
   window.location.hostname === "localhost" ||
   window.location.hostname === "127.0.0.1";
 
-const url = isLocal
-  ? `${fixedHost}${PLAYER_API}?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}${action}`
-  : `/api/xtream?host=${encodeURIComponent(fixedHost)}&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}&action=${action}`;
-  
+const url =
+  `${fixedHost}${PLAYER_API}?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}${action}`;
+   
     const response =
       await fetch(url, {
 
