@@ -7,7 +7,7 @@ export default async function handler(req, res) {
     }
 
     const cleanHost = String(host).replace(/\/+$/, "");
-    const cleanAction = String(action || "");
+    const cleanAction = decodeURIComponent(String(action || ""));
 
     const apiUrl =
       `${cleanHost}/player_api.php?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}${cleanAction}`;
