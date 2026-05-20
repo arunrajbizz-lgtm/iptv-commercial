@@ -2,14 +2,23 @@ export function isTizenTV() {
   return !!(window.webapis && window.webapis.avplay);
 }
 
-export function playWithTizenAVPlay(url, videoBoxId = "avplay-container") {
+export function playWithTizenAVPlay(url, containerId = "avplay-container") {
   if (!isTizenTV()) return false;
 
   try {
-    const box = document.getElementById(videoBoxId);
+    const box = document.getElementById(containerId);
+    if (!box) return false;
+
     const rect = box.getBoundingClientRect();
 
-    window.webapis.avplay.close();
+    try {
+      window.webapis.avplay.stop();
+    } catch {}
+
+    try {
+      window.webapis.avplay.close();
+    } catch {}
+
     window.webapis.avplay.open(url);
 
     window.webapis.avplay.setDisplayRect(
@@ -32,5 +41,21 @@ export function playWithTizenAVPlay(url, videoBoxId = "avplay-container") {
   } catch (e) {
     console.log("AVPlay error", e);
     return false;
+  }
+}
+
+export function stopTizenAVPlay() {
+  try {
+    if (!isTizenTV()) return;
+
+    try {
+      window.webapis.avplay.stop();
+    } catch {}
+
+    try {
+      window.webapis.avplay.close();
+    } catch {}
+  } catch (e) {
+    console.log("AVPlay stop error", e);
   }
 }
