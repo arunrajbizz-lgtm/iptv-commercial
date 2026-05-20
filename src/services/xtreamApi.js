@@ -42,10 +42,6 @@ async function apiRequest(host, username, password, action = "") {
   }
 }
 
-function proxyStreamUrl(directUrl) {
-  return `/api/stream?url=${encodeURIComponent(directUrl)}`;
-}
-
 export async function testXtreamLogin(host, username, password) {
   try {
     const data = await apiRequest(host, username, password);
@@ -174,23 +170,20 @@ export async function getEPG(host, username, password, streamId) {
   return data || {};
 }
 
-// LIVE URL
+// LIVE URL - Tizen TV direct m3u8
 export function buildLiveUrl(
   host,
   username,
   password,
   streamId,
-  extension = "ts"
+  extension = "m3u8"
 ) {
   const fixedHost = normalizeXtreamHost(host);
 
-  const directUrl =
-    `${fixedHost}/live/${username}/${password}/${streamId}.${extension}`;
-
-  return proxyStreamUrl(directUrl);
+  return `${fixedHost}/live/${username}/${password}/${streamId}.${extension}`;
 }
 
-// MOVIE URL
+// MOVIE URL - Tizen TV direct mp4
 export function buildMovieUrl(
   host,
   username,
@@ -200,13 +193,10 @@ export function buildMovieUrl(
 ) {
   const fixedHost = normalizeXtreamHost(host);
 
-  const directUrl =
-    `${fixedHost}/movie/${username}/${password}/${streamId}.${extension}`;
-
-  return proxyStreamUrl(directUrl);
+  return `${fixedHost}/movie/${username}/${password}/${streamId}.${extension}`;
 }
 
-// SERIES URL
+// SERIES URL - Tizen TV direct mp4
 export function buildSeriesUrl(
   host,
   username,
@@ -216,8 +206,5 @@ export function buildSeriesUrl(
 ) {
   const fixedHost = normalizeXtreamHost(host);
 
-  const directUrl =
-    `${fixedHost}/series/${username}/${password}/${episodeId}.${extension}`;
-
-  return proxyStreamUrl(directUrl);
+  return `${fixedHost}/series/${username}/${password}/${episodeId}.${extension}`;
 }
