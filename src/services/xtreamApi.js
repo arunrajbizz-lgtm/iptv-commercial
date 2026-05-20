@@ -33,7 +33,9 @@ async function apiRequest(
       normalizeXtreamHost(host);
 
     const url =
-  `/api/xtream?host=${encodeURIComponent(fixedHost)}&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}&action=${encodeURIComponent(action)}`;
+
+      `${fixedHost}${PLAYER_API}?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}${action}`;
+
     const response =
       await fetch(url, {
 
