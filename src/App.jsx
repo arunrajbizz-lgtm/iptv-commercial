@@ -4,183 +4,137 @@ import {
   Route,
   Navigate
 } from "react-router-dom";
+import { useState, useEffect } from "react";
 
 // PAGES
-import LoginPage
-from "./pages/LoginPage";
+import LoginPage from "./pages/LoginPage";
+import Dashboard from "./pages/Dashboard";
+import LiveTVPage from "./pages/LiveTVPage";
+import MoviesPage from "./pages/MoviesPage";
+import SeriesPage from "./pages/SeriesPage";
+import SeriesInfoPage from "./pages/SeriesInfoPage";
+import PlayerPage from "./pages/PlayerPage";
+import SearchPage from "./pages/SearchPage";
+import FavoritesPage from "./pages/FavoritesPage";
+import SettingsPage from "./pages/SettingsPage";
 
-import Dashboard
-from "./pages/Dashboard";
+/**
+ * A wrapper for routes that require authentication.
+ * Checks localStorage on every render to ensure auth state is current.
+ */
+function ProtectedRoute({ children }) {
+  const [auth, setAuth] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-import LiveTVPage
-from "./pages/LiveTVPage";
+  useEffect(() => {
+    function checkAuth() {
+      try {
+        const data = localStorage.getItem("iptv");
+        setAuth(data ? JSON.parse(data) : null);
+      } catch (e) {
+        setAuth(null);
+      } finally {
+        setLoading(false);
+      }
+    }
 
-import MoviesPage
-from "./pages/MoviesPage";
+    checkAuth();
+    // Also listen for storage changes (e.g. from handleLogin)
+    window.addEventListener("storage", checkAuth);
+    return () => window.removeEventListener("storage", checkAuth);
+  }, []);
 
-import SeriesPage
-from "./pages/SeriesPage";
+  if (loading) return null;
 
-import SeriesInfoPage
-from "./pages/SeriesInfoPage";
-
-import PlayerPage
-from "./pages/PlayerPage";
-
-import SearchPage
-from "./pages/SearchPage";
-
-import FavoritesPage
-from "./pages/FavoritesPage";
-
-import SettingsPage
-from "./pages/SettingsPage";
-
-// APP
-export default function App() {
-
-  // LOGIN
-  let iptv = null;
-
-  try {
-    iptv = JSON.parse(
-      localStorage.getItem(
-        "iptv"
-      )
-    );
-  } catch {
-    localStorage.removeItem(
-      "iptv"
-    );
+  if (!auth) {
+    return <Navigate to="/login" replace />;
   }
 
+  return children;
+}
+
+export default function App() {
   return (
-
     <HashRouter>
-
       <Routes>
+        {/* PUBLIC ROUTES */}
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/login" element={<LoginPage />} />
 
-        {/* LOGIN */}
-
-        <Route
-          path="/"
-          element={
-            iptv
-              ? <Navigate to="/dashboard" />
-              : <LoginPage />
-          }
-        />
-
-        <Route
-          path="/login"
-          element={
-            <LoginPage />
-          }
-        />
-
-        {/* DASHBOARD */}
-
+        {/* PROTECTED ROUTES */}
         <Route
           path="/dashboard"
           element={
-            iptv
-              ? <Dashboard />
-              : <Navigate to="/login" />
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
           }
         />
-
-        {/* LIVE TV */}
-
         <Route
           path="/live"
           element={
-            iptv
-              ? <LiveTVPage />
-              : <Navigate to="/login" />
+            <ProtectedRoute>
+              <LiveTVPage />
+            </ProtectedRoute>
           }
         />
-
-        {/* MOVIES */}
-
         <Route
           path="/movies"
           element={
-            iptv
-              ? <MoviesPage />
-              : <Navigate to="/login" />
+            <ProtectedRoute>
+              <MoviesPage />
+            </ProtectedRoute>
           }
         />
-
-        {/* SERIES */}
-
         <Route
           path="/series"
           element={
-            iptv
-              ? <SeriesPage />
-              : <Navigate to="/login" />
+            <ProtectedRoute>
+              <SeriesPage />
+            </ProtectedRoute>
           }
         />
-
-        {/* SERIES INFO */}
-
         <Route
           path="/series-info"
           element={
-            iptv
-              ? <SeriesInfoPage />
-              : <Navigate to="/login" />
+            <ProtectedRoute>
+              <SeriesInfoPage />
+            </ProtectedRoute>
           }
         />
-
-        {/* PLAYER */}
-
         <Route
           path="/player"
           element={
-            iptv
-              ? <PlayerPage />
-              : <Navigate to="/login" />
+            <ProtectedRoute>
+              <PlayerPage />
+            </ProtectedRoute>
           }
         />
-
-        {/* SEARCH */}
-
         <Route
           path="/search"
           element={
-            iptv
-              ? <SearchPage />
-              : <Navigate to="/login" />
+            <ProtectedRoute>
+              <SearchPage />
+            </ProtectedRoute>
           }
         />
-
-        {/* FAVORITES */}
-
         <Route
           path="/favorites"
           element={
-            iptv
-              ? <FavoritesPage />
-              : <Navigate to="/login" />
+            <ProtectedRoute>
+              <FavoritesPage />
+            </ProtectedRoute>
           }
         />
-
-        {/* SETTINGS */}
-
         <Route
           path="/settings"
           element={
-            iptv
-              ? <SettingsPage />
-              : <Navigate to="/login" />
+            <ProtectedRoute>
+              <SettingsPage />
+            </ProtectedRoute>
           }
         />
-
       </Routes>
-
     </HashRouter>
   );
 }
-
-// forced reload

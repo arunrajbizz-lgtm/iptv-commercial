@@ -41,7 +41,7 @@ class PerformanceManager {
       // UPDATE FPS
       if (
         now >
-        this.lastFrame + 1000
+        this.lastFrame + 2000
       ) {
 
         this.fps =
@@ -62,14 +62,14 @@ class PerformanceManager {
 
         this.lastFrame = now;
 
-        console.log(
-          "FPS:",
-          this.fps
-        );
+        // Only log if low or every 10 seconds
+        if (this.fps < 30 || Math.random() < 0.1) {
+           console.log("FPS:", this.fps);
+        }
 
         // LOW FPS
         if (
-          this.fps < 30
+          this.fps < 20
         ) {
 
           this.enableLowPerformanceMode();
@@ -121,7 +121,7 @@ class PerformanceManager {
             this.memory
           );
 
-        }, 10000);
+        }, 30000);
       }
 
     } catch (error) {
