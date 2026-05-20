@@ -3,8 +3,7 @@ import { navigateTo } from "../utils/navigation";
 import { loadM3U } from "../utils/M3UParser";
 import { KEYS } from "../utils/tizenRemote";
 import {
-  normalizeXtreamHost,
-  testXtreamLogin
+  normalizeXtreamHost
 } from "../services/xtreamApi";
 import "./LoginPage.css";
 
@@ -25,22 +24,26 @@ const FIELD_META = {
   host: {
     label: "Server URL",
     placeholder: "http://your-provider.com:8080",
-    type: "text"
+    type: "text",
+    inputMode: "url"
   },
   username: {
     label: "Username",
     placeholder: "Enter username",
-    type: "text"
+    type: "text",
+    inputMode: "text"
   },
   password: {
     label: "Password",
     placeholder: "Enter password",
-    type: "password"
+    type: "password",
+    inputMode: "text"
   },
   m3u: {
     label: "M3U playlist URL",
     placeholder: "https://example.com/playlist.m3u",
-    type: "text"
+    type: "text",
+    inputMode: "url"
   }
 };
 
@@ -68,13 +71,22 @@ export default function LoginPage() {
 
   // Focus effect
   useEffect(() => {
-    if (focused === 0) {
-      modeRefs.current[mode]?.focus();
-    } else if (focused <= fields.length) {
-      inputRefs.current[focused - 1]?.focus();
-    } else if (focused === fields.length + 1) {
-      submitRef.current?.focus();
-    }
+    const timer = setTimeout(() => {
+      if (focused === 0) {
+        modeRefs.current[mode]?.focus();
+      } else if (focused > 0 && focused <= fields.length) {
+        const input = inputRefs.current[focused - 1];
+        if (input) {
+          input.focus();
+          // Explicitly trigger click to help some Tizen versions open IME
+          // This is a common pattern for TV apps
+          input.click();
+        }
+      } else if (focused === fields.length + 1) {
+        submitRef.current?.focus();
+      }
+    }, 50);
+    return () => clearTimeout(timer);
   }, [focused, mode, fields.length]);
 
   useEffect(() => {
@@ -117,7 +129,18 @@ export default function LoginPage() {
           if (focused === fields.length + 1) {
             event.preventDefault();
             handleLogin();
+          } else if (isInput) {
+            // Let the global tizenInputFix handle the click/IME trigger
+            // or explicitly do it here if needed
+          } else if (focused === 0) {
+            event.preventDefault();
+            selectMode(mode);
+            setFocused(1); // Jump to first input after selecting mode
           }
+          break;
+
+        case KEYS.BACK:
+          // Optional: handle back button to go up a field or exit?
           break;
 
         default:
@@ -274,6 +297,7 @@ export default function LoginPage() {
               <label
                 key={field}
                 className={`field-row ${focused === focusIndex ? "focused" : ""}`}
+                onClick={() => setFocused(focusIndex)}
               >
                 <span>{meta.label}</span>
                 <input
@@ -281,9 +305,11 @@ export default function LoginPage() {
                   type={meta.type}
                   value={form[field]}
                   placeholder={meta.placeholder}
+                  inputMode={meta.inputMode}
                   autoComplete={field === "password" ? "current-password" : "off"}
                   onFocus={() => setFocused(focusIndex)}
                   onChange={(event) => updateField(field, event.target.value)}
+                  onClick={(e) => e.stopPropagation()}
                 />
               </label>
             );
