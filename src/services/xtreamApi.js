@@ -1,12 +1,7 @@
-const PLAYER_API =
-  "/player_api.php";
-
 export function normalizeXtreamHost(host) {
   let fixedHost = String(host || "").trim();
 
-  if (!fixedHost) {
-    return "";
-  }
+  if (!fixedHost) return "";
 
   if (!/^https?:\/\//i.test(fixedHost)) {
     fixedHost = `http://${fixedHost}`;
@@ -19,298 +14,162 @@ export function normalizeXtreamHost(host) {
   return fixedHost;
 }
 
-// REQUEST
-async function apiRequest(
-  host,
-  username,
-  password,
-  action = ""
-) {
-
+async function apiRequest(host, username, password, action = "") {
   try {
+    const fixedHost = normalizeXtreamHost(host);
 
-    const fixedHost =
-      normalizeXtreamHost(host);
+    const url =
+      `/api/xtream?host=${encodeURIComponent(fixedHost)}` +
+      `&username=${encodeURIComponent(username)}` +
+      `&password=${encodeURIComponent(password)}` +
+      `&action=${encodeURIComponent(action)}`;
 
-   const isLocal =
-  window.location.hostname === "localhost" ||
-  window.location.hostname === "127.0.0.1";
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Accept: "application/json"
+      }
+    });
 
-const url =
-  `/api/xtream?host=${encodeURIComponent(fixedHost)}&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}&action=${encodeURIComponent(action)}`;
-  
-    const response =
-      await fetch(url, {
-
-        method: "GET",
-
-        headers: {
-
-          Accept:
-            "application/json"
-        }
-      });
-
-    if (
-      !response.ok
-    ) {
-
-      throw new Error(
-        `HTTP ${response.status}`
-      );
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
     }
 
-    const data =
-      await response.json();
-
-    return data;
-
+    return await response.json();
   } catch (error) {
-
-    console.log(
-      "Xtream API Error",
-      error
-    );
-
+    console.log("Xtream API Error", error);
     throw error;
   }
 }
 
-// TEST LOGIN
-export async function testXtreamLogin(
-  host,
-  username,
-  password
-) {
+function proxyStreamUrl(directUrl) {
+  return `/api/stream?url=${encodeURIComponent(directUrl)}`;
+}
 
+export async function testXtreamLogin(host, username, password) {
   try {
-
-    const data =
-      await apiRequest(
-
-        host,
-
-        username,
-
-        password
-      );
-
-    const userInfo =
-      data?.user_info;
+    const data = await apiRequest(host, username, password);
+    const userInfo = data?.user_info;
 
     const authenticated =
-      userInfo?.auth === 1
-      ||
-      userInfo?.auth === "1";
+      userInfo?.auth === 1 || userInfo?.auth === "1";
 
     return {
       ok: !!authenticated,
       data,
-      message:
-        authenticated
-          ? ""
-          : userInfo?.message || "Invalid username, password, or server URL"
+      message: authenticated
+        ? ""
+        : userInfo?.message || "Invalid username, password, or server URL"
     };
-
   } catch (error) {
-
     return {
       ok: false,
       data: null,
       message:
-        error?.message
-        ||
+        error?.message ||
         "Unable to connect. Check CORS/mixed-content rules on your hosted server."
     };
   }
 }
 
-// LIVE CATEGORIES
-export async function getLiveCategories(
-  host,
-  username,
-  password
-) {
-
-  const data =
-    await apiRequest(
-
-      host,
-
-      username,
-
-      password,
-
-      "&action=get_live_categories"
-    );
+export async function getLiveCategories(host, username, password) {
+  const data = await apiRequest(
+    host,
+    username,
+    password,
+    "&action=get_live_categories"
+  );
 
   return data || [];
 }
 
-// LIVE STREAMS
 export async function getLiveStreams(
   host,
   username,
   password,
   categoryId = ""
 ) {
-  const categoryQuery =
-    categoryId
-      ? `&category_id=${encodeURIComponent(categoryId)}`
-      : "";
+  const categoryQuery = categoryId
+    ? `&category_id=${encodeURIComponent(categoryId)}`
+    : "";
 
-  const data =
-    await apiRequest(
+  const data = await apiRequest(
+    host,
+    username,
+    password,
+    `&action=get_live_streams${categoryQuery}`
+  );
 
-      host,
+  localStorage.setItem("live_channels", JSON.stringify(data || []));
 
-      username,
+  return data || [];
+}
 
-      password,
-
-      `&action=get_live_streams${categoryQuery}`
-    );
-
-  // SAVE
-  localStorage.setItem(
-
-    "live_channels",
-
-    JSON.stringify(
-      data || []
-    )
+export async function getMovieCategories(host, username, password) {
+  const data = await apiRequest(
+    host,
+    username,
+    password,
+    "&action=get_vod_categories"
   );
 
   return data || [];
 }
 
-// MOVIE CATEGORIES
-export async function getMovieCategories(
-  host,
-  username,
-  password
-) {
-
-  const data =
-    await apiRequest(
-
-      host,
-
-      username,
-
-      password,
-
-      "&action=get_vod_categories"
-    );
-
-  return data || [];
-}
-
-// MOVIES
 export async function getMovies(
   host,
   username,
   password,
   categoryId = ""
 ) {
+  const data = await apiRequest(
+    host,
+    username,
+    password,
+    `&action=get_vod_streams&category_id=${encodeURIComponent(categoryId)}`
+  );
 
-  const data =
-    await apiRequest(
+  localStorage.setItem("movies", JSON.stringify(data || []));
 
-      host,
+  return data || [];
+}
 
-      username,
-
-      password,
-
-      `&action=get_vod_streams&category_id=${categoryId}`
-    );
-
-  localStorage.setItem(
-
-    "movies",
-
-    JSON.stringify(
-      data || []
-    )
+export async function getSeriesCategories(host, username, password) {
+  const data = await apiRequest(
+    host,
+    username,
+    password,
+    "&action=get_series_categories"
   );
 
   return data || [];
 }
 
-// SERIES CATEGORIES
-export async function getSeriesCategories(
-  host,
-  username,
-  password
-) {
-
-  const data =
-    await apiRequest(
-
-      host,
-
-      username,
-
-      password,
-
-      "&action=get_series_categories"
-    );
-
-  return data || [];
-}
-
-// SERIES
 export async function getSeries(
   host,
   username,
   password,
   categoryId = ""
 ) {
-
-  const data =
-    await apiRequest(
-
-      host,
-
-      username,
-
-      password,
-
-      `&action=get_series&category_id=${categoryId}`
-    );
-
-  localStorage.setItem(
-
-    "series",
-
-    JSON.stringify(
-      data || []
-    )
+  const data = await apiRequest(
+    host,
+    username,
+    password,
+    `&action=get_series&category_id=${encodeURIComponent(categoryId)}`
   );
+
+  localStorage.setItem("series", JSON.stringify(data || []));
 
   return data || [];
 }
 
-// EPG
-export async function getEPG(
-  host,
-  username,
-  password,
-  streamId
-) {
-
-  const data =
-    await apiRequest(
-
-      host,
-
-      username,
-
-      password,
-
-      `&action=get_simple_data_table&stream_id=${streamId}`
-    );
+export async function getEPG(host, username, password, streamId) {
+  const data = await apiRequest(
+    host,
+    username,
+    password,
+    `&action=get_simple_data_table&stream_id=${encodeURIComponent(streamId)}`
+  );
 
   return data || {};
 }
@@ -320,16 +179,15 @@ export function buildLiveUrl(
   host,
   username,
   password,
-  streamId
+  streamId,
+  extension = "ts"
 ) {
+  const fixedHost = normalizeXtreamHost(host);
 
-  const fixedHost =
-    normalizeXtreamHost(host);
+  const directUrl =
+    `${fixedHost}/live/${username}/${password}/${streamId}.${extension}`;
 
-  return (
-
-    `${fixedHost}/live/${username}/${password}/${streamId}.m3u8`
-  );
+  return proxyStreamUrl(directUrl);
 }
 
 // MOVIE URL
@@ -340,14 +198,12 @@ export function buildMovieUrl(
   streamId,
   extension = "mp4"
 ) {
+  const fixedHost = normalizeXtreamHost(host);
 
-  const fixedHost =
-    normalizeXtreamHost(host);
+  const directUrl =
+    `${fixedHost}/movie/${username}/${password}/${streamId}.${extension}`;
 
-  return (
-
-    `${fixedHost}/movie/${username}/${password}/${streamId}.${extension}`
-  );
+  return proxyStreamUrl(directUrl);
 }
 
 // SERIES URL
@@ -358,12 +214,10 @@ export function buildSeriesUrl(
   episodeId,
   extension = "mp4"
 ) {
+  const fixedHost = normalizeXtreamHost(host);
 
-  const fixedHost =
-    normalizeXtreamHost(host);
+  const directUrl =
+    `${fixedHost}/series/${username}/${password}/${episodeId}.${extension}`;
 
-  return (
-
-    `${fixedHost}/series/${username}/${password}/${episodeId}.${extension}`
-  );
+  return proxyStreamUrl(directUrl);
 }
