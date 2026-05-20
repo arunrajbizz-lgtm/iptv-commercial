@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { navigateTo } from "../utils/navigation";
 import { KEYS } from "../utils/tizenRemote";
 import focusManager from "../core/FocusManager";
@@ -158,3 +158,4 @@ export default function Dashboard() {
     </div>
   );
 }
+

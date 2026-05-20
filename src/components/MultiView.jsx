@@ -14,7 +14,7 @@ import {
 import {
   playWithTizenAVPlay,
   stopTizenAVPlay
-} from "../utils/tizenPlayer";
+} from "../utils/tizenPlayer.js";
 
 export default function MultiView({
   visible,
@@ -26,8 +26,8 @@ export default function MultiView({
 
   useEffect(() => {
     if (!visible) return;
-
     setSelected(channels.slice(0, 4));
+    setFocused(0);
   }, [visible, channels]);
 
   useEffect(() => {
@@ -77,12 +77,12 @@ export default function MultiView({
       iptv.username,
       iptv.password,
       channel.stream_id,
-      "ts"
+      "m3u8"
     );
 
     const timer = setTimeout(() => {
       playWithTizenAVPlay(url, "avplay-container");
-    }, 300);
+    }, 500);
 
     return () => {
       clearTimeout(timer);
@@ -117,7 +117,7 @@ export default function MultiView({
           width: "calc(50% - 9px)",
           height: "calc(50% - 9px)",
           background: "#000",
-          zIndex: 1
+          zIndex: 10
         }}
       />
 
@@ -127,7 +127,7 @@ export default function MultiView({
           iptv.username,
           iptv.password,
           channel.stream_id,
-          "ts"
+          "m3u8"
         );
 
         return (
@@ -142,7 +142,7 @@ export default function MultiView({
               overflow: "hidden",
               borderRadius: "12px",
               background: "#000",
-              zIndex: 2
+              zIndex: focused === index ? 20 : 2
             }}
           >
             {focused !== index && (
@@ -169,7 +169,7 @@ export default function MultiView({
               padding: "14px",
               background:
                 "linear-gradient(to top, rgba(0,0,0,0.9), transparent)",
-              zIndex: 5
+              zIndex: 30
             }}>
               <div style={{
                 fontSize: "22px",

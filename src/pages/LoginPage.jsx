@@ -151,29 +151,6 @@ export default function LoginPage() {
           throw new Error("Enter server URL, username, and password.");
         }
 
-        if (mode === 0) {
-  const host = normalizeXtreamHost(form.host);
-  const username = form.username.trim();
-  const password = form.password.trim();
-
-  if (!host || !username || !password) {
-    throw new Error("Enter server URL, username, and password.");
-  }
-
-  localStorage.setItem(
-    "iptv",
-    JSON.stringify({
-      type: "xtream",
-      host,
-      username,
-      password
-    })
-  );
-
-  navigateTo("/dashboard");
-  return;
-}
-
         localStorage.setItem(
           "iptv",
           JSON.stringify({
@@ -265,7 +242,7 @@ export default function LoginPage() {
             <button
               key={item.id}
               type="button"
-              className={`mode-tab ${mode === index ? "active" : ""} ${focused === 0 && mode === index ? "tv-focused" : ""}`}
+              className={mode-tab  }
               onClick={() => selectMode(index)}
               onFocus={() => setFocused(0)}
               role="tab"
@@ -285,7 +262,7 @@ export default function LoginPage() {
             return (
               <label
                 key={field}
-                className={`field-row ${focused === focusIndex ? "tv-focused" : ""}`}
+                className={ield-row }
               >
                 <span>{meta.label}</span>
                 <input
@@ -304,7 +281,7 @@ export default function LoginPage() {
 
           <button
             type="button"
-            className={`login-submit ${focused === fields.length + 1 ? "tv-focused" : ""}`}
+            className={login-submit }
             onFocus={() => setFocused(fields.length + 1)}
             onClick={handleLogin}
             disabled={loading}

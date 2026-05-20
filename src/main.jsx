@@ -1,4 +1,4 @@
-import React from "react";
+import React, { StrictMode } from "react";
 
 import ReactDOM
 from "react-dom/client";
@@ -92,7 +92,7 @@ const root =
 // RENDER
 root.render(
 
-  <React.StrictMode>
+  <StrictMode>
 
     <ErrorBoundary>
 
@@ -102,5 +102,5 @@ root.render(
 
     </ErrorBoundary>
 
-  </React.StrictMode>
+  </StrictMode>
 );

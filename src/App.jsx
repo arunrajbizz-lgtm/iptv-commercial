@@ -182,3 +182,5 @@ export default function App() {
     </HashRouter>
   );
 }
+
+// forced reload
