@@ -6,6 +6,8 @@ from "react-dom/client";
 import App
 from "./App";
 
+import { enableTizenInputFix } from "./utils/tizenInputFix";
+
 import ErrorBoundary
 from "./components/ErrorBoundary";
 
@@ -78,6 +80,7 @@ function initializeTV() {
 initializeTV();
 
 // ROOT
+enableTizenInputFix();
 const root =
   ReactDOM.createRoot(
 
