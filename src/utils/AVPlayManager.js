@@ -70,6 +70,10 @@ class AVPlayManager {
           rect = this.container.getBoundingClientRect();
         }
 
+        try {
+          this.player.setDisplayMethod("PLAYER_DISPLAY_MODE_AUTO_ASPECT_RATIO");
+        } catch (e) { console.log("Set DisplayMethod error", e); }
+
         this.player.setDisplayRect(
           Math.round(rect.left),
           Math.round(rect.top),
@@ -83,35 +87,30 @@ class AVPlayManager {
           const isTS = url.includes("/live/") || url.endsWith(".ts");
 
           // 1. Adaptive Bitrate Logic
-          // STARTBITRATE=HIGHEST avoids blurry starts on good connections
-          // BITRATES range expanded to support 4K (up to 100Mbps)
-          let adaptiveConf = "BITRATES=1000~100000|STARTBITRATE=HIGHEST|SKIPBITRATE=HIGHEST";
-          
-          // 2. 4K/UHD Support
-          // We set max resolution to 4K to ensure decoder allocation is sufficient
-          adaptiveConf += "|FIXED_MAX_RESOLUTION=3840X2160";
+          // Reverted to LOWEST for faster start times and better compatibility
+          let adaptiveConf = "BITRATES=1000~100000|STARTBITRATE=LOWEST|SKIPBITRATE=LOWEST";
           
           this.player.setStreamingProperty("ADAPTIVE_INFO", adaptiveConf);
 
-          // 3. Live Optimization
+          // 2. Live Optimization
           if (isHLS || isTS) {
-            this.player.setStreamingProperty("IS_LIVE", "true");
+            this.player.setStreamingProperty("IS_LIVE", "TRUE");
           }
 
-          // 4. Set 4K mode for older Tizen versions
-          this.player.setStreamingProperty("SET_MODE_4K", "true");
+          // 3. 4K Support (Only set mode, let player handle resolution)
+          this.player.setStreamingProperty("SET_MODE_4K", "TRUE");
 
-          // 5. Detailed Error Listening
-          this.player.setStreamingProperty("LISTEN_SP_ERROR", "true");
+          // 4. Detailed Error Listening
+          this.player.setStreamingProperty("LISTEN_SP_ERROR", "TRUE");
 
         } catch (e) {
           console.log("Set Streaming Property Error:", e);
         }
 
         // BUFFER
-        // Increased buffers for IPTV stability (5s to start, 10s for resume)
+        // 3s for start is standard, 10s for resume/IPTV stability
         try {
-          this.player.setBufferingParam("PLAYER_BUFFER_FOR_PLAY", "PLAYER_BUFFER_SIZE_IN_SECOND", 5);
+          this.player.setBufferingParam("PLAYER_BUFFER_FOR_PLAY", "PLAYER_BUFFER_SIZE_IN_SECOND", 3);
           this.player.setBufferingParam("PLAYER_BUFFER_FOR_RESUME", "PLAYER_BUFFER_SIZE_IN_SECOND", 10);
         } catch (e) {
           console.log("Set Buffer Error:", e);
