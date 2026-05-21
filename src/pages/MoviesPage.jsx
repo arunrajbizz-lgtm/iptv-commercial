@@ -12,6 +12,7 @@ export default function MoviesPage() {
   const [focusedMovie, setFocusedMovie] = useState(0);
   const [zone, setZone] = useState("content");
   const [showDrawer, setShowDrawer] = useState(false);
+  const [catSearch, setCatSearch] = useState("");
   const gridRef = useRef(null);
   const COLS = 6;
 
@@ -39,6 +40,13 @@ export default function MoviesPage() {
     } catch (error) { console.log(error); }
   }
 
+  const filteredCategories = useMemo(() => {
+    if (!catSearch) return categories;
+    return categories.filter(c => 
+      c.category_name.toLowerCase().includes(catSearch.toLowerCase())
+    );
+  }, [categories, catSearch]);
+
   useEffect(() => {
     function handleKeys(event) {
       const currentZone = focusManager.getZone();
@@ -55,7 +63,7 @@ export default function MoviesPage() {
 
         case KEYS.DOWN:
           if (zone === "drawer") {
-             if (focusedCategory < categories.length - 1) setFocusedCategory(prev => prev + 1);
+             if (focusedCategory < filteredCategories.length - 1) setFocusedCategory(prev => prev + 1);
           } else {
              if (focusedMovie + COLS < movies.length) setFocusedMovie(prev => prev + COLS);
           }
@@ -79,7 +87,12 @@ export default function MoviesPage() {
           if (zone === "drawer") {
              setShowDrawer(false);
              setZone("content");
-             loadMovies(categories[focusedCategory]?.category_id);
+             const selectedCat = filteredCategories[focusedCategory];
+             if (selectedCat) {
+                const realIndex = categories.findIndex(c => c.category_id === selectedCat.category_id);
+                setFocusedCategory(realIndex);
+                loadMovies(selectedCat.category_id);
+             }
           } else {
              if (focusedMovie % COLS < COLS - 1 && focusedMovie < movies.length - 1) {
                 setFocusedMovie(prev => prev + 1);
@@ -91,7 +104,12 @@ export default function MoviesPage() {
           if (zone === "drawer") {
              setShowDrawer(false);
              setZone("content");
-             loadMovies(categories[focusedCategory]?.category_id);
+             const selectedCat = filteredCategories[focusedCategory];
+             if (selectedCat) {
+                const realIndex = categories.findIndex(c => c.category_id === selectedCat.category_id);
+                setFocusedCategory(realIndex);
+                loadMovies(selectedCat.category_id);
+             }
           } else {
              openMovie(movies[focusedMovie]);
           }
@@ -113,7 +131,7 @@ export default function MoviesPage() {
 
     document.addEventListener("keydown", handleKeys);
     return () => document.removeEventListener("keydown", handleKeys);
-  }, [zone, focusedCategory, focusedMovie, categories, movies, showDrawer]);
+  }, [zone, focusedCategory, focusedMovie, categories, filteredCategories, movies, showDrawer]);
 
   useEffect(() => {
      if (zone === "content" && gridRef.current) {
@@ -137,8 +155,23 @@ export default function MoviesPage() {
       
       <div className={`category-drawer ${showDrawer ? "visible" : ""}`}>
          <h2 className="drawer-title">Movie Categories</h2>
+
+         <div className="channel-search" style={{ marginBottom: "20px", width: "100%" }}>
+            <span>FILTER CATEGORIES</span>
+            <input 
+              type="text" 
+              placeholder="Search category..." 
+              value={catSearch}
+              onChange={e => {
+                setCatSearch(e.target.value);
+                setFocusedCategory(0);
+              }}
+              style={{ width: "100%", background: "rgba(255,255,255,0.1)", color: "#fff", padding: "10px", border: "none", borderRadius: "4px" }}
+            />
+         </div>
+
          <div className="drawer-list">
-            {categories.map((cat, index) => (
+            {filteredCategories.map((cat, index) => (
               <div 
                 key={cat.category_id}
                 className={`drawer-item ${focusedCategory === index && zone === "drawer" ? "focused" : ""} ${categories[focusedCategory]?.category_id === cat.category_id ? "active" : ""}`}

@@ -81,11 +81,18 @@ export default function SeriesInfoPage() {
     const episode = episodes[focusedEpisode];
     if (!episode || !series) return;
     
-    // In Xtream, the episode object has an 'id' which is the stream_id for that episode
-    localStorage.setItem("stream_id", episode.id);
-    localStorage.setItem("stream_name", `${series.name} - S${episode.season} E${episode.episode_num || episode.id}: ${episode.title}`);
+    // In Xtream, the episode object might have 'id' or 'episode_id'
+    const epId = episode.id || episode.episode_id;
+    if (!epId) {
+      console.error("Episode ID not found", episode);
+      alert("Episode ID not found");
+      return;
+    }
+
+    localStorage.setItem("stream_id", epId);
+    localStorage.setItem("stream_name", `${series.name} - S${episode.season} E${episode.episode_num || epId}: ${episode.title || "Episode"}`);
     localStorage.setItem("stream_type", "series");
-    localStorage.setItem("stream_icon", episode.info?.movie_image || series.cover);
+    localStorage.setItem("stream_icon", episode.info?.movie_image || series.cover || "");
     navigateTo("/player");
   }
 
