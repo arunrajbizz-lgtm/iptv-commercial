@@ -168,7 +168,7 @@ body {
 .login-page {
   width: 100%;
   height: 100vh;
-  background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('src/assets/hero.png') center/cover no-repeat;
+  background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('./assets/hero.png') center/cover no-repeat;
   display: flex;
   justify-content: center;
   align-items: center;

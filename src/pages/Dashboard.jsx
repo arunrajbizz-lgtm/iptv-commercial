@@ -7,6 +7,7 @@ import RecommendedRow from "../components/RecommendedRow";
 import ContinueWatching from "../components/ContinueWatching";
 import RecentChannels from "../components/RecentChannels";
 import VoiceSearchOverlay from "../components/VoiceSearchOverlay";
+import heroImage from "../assets/hero.png";
 
 export default function Dashboard() {
   const [contentRowIndex, setContentRowIndex] = useState(-1); // -1 for Hero
@@ -83,7 +84,7 @@ export default function Dashboard() {
       <main className="app-main">
         {/* HERO SECTION */}
         <section className="hero-banner">
-          <img src="assets/hero.png" alt="Hero" className="hero-image" />
+          <img src={heroImage} alt="Hero" className="hero-image" />
           <div className="hero-overlay" />
           
           <div className="hero-content fade-in">

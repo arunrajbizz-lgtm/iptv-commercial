@@ -22,6 +22,7 @@ import {
 } from "./utils/tizenRemote";
 
 import "./index.css";
+import "./App.css";
 
 // PERFORMANCE
 performanceManager.initialize();

@@ -159,6 +159,17 @@ export async function getSeries(
   return data || [];
 }
 
+export async function getSeriesInfo(host, username, password, seriesId) {
+  const data = await apiRequest(
+    host,
+    username,
+    password,
+    `&action=get_series_info&series_id=${encodeURIComponent(seriesId)}`
+  );
+
+  return data || {};
+}
+
 export async function getEPG(host, username, password, streamId) {
   const data = await apiRequest(
     host,

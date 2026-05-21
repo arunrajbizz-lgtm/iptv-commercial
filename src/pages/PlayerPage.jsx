@@ -18,6 +18,9 @@ import {
 import avplayManager
 from "../utils/AVPlayManager";
 
+import AudioSubtitleSelector
+from "../components/AudioSubtitleSelector";
+
 import MiniGuide
 from "../components/MiniGuide";
 
