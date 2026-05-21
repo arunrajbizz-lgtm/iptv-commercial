@@ -77,7 +77,7 @@ export default function MultiView({
       iptv.username,
       iptv.password,
       channel.stream_id,
-      "m3u8"
+      "ts"
     );
 
     const timer = setTimeout(() => {
@@ -127,7 +127,7 @@ export default function MultiView({
           iptv.username,
           iptv.password,
           channel.stream_id,
-          "m3u8"
+          "ts"
         );
 
         return (

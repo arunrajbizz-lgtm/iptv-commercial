@@ -179,8 +179,11 @@ export function buildLiveUrl(
   extension = "m3u8"
 ) {
   const fixedHost = normalizeXtreamHost(host);
+  
+  // If streamId already contains an extension, don't add another one
+  const cleanId = String(streamId).split(".")[0];
 
-  return `${fixedHost}/live/${username}/${password}/${streamId}.${extension}`;
+  return `${fixedHost}/live/${username}/${password}/${cleanId}.${extension}`;
 }
 
 // MOVIE URL - Tizen TV direct mp4

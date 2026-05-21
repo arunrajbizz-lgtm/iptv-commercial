@@ -20,12 +20,23 @@ const MENU = [
 
 export default function Dashboard() {
   const [menuIndex, setMenuIndex] = useState(0);
+  const [contentRowIndex, setContentRowIndex] = useState(0);
   const [sidebarFocused, setSidebarFocused] = useState(true);
   const [showVoice, setShowVoice] = useState(false);
 
   useEffect(() => {
     focusManager.setZone("sidebar");
   }, []);
+
+  useEffect(() => {
+    const el = document.querySelector(`.row-wrapper-${contentRowIndex}`);
+    if (el) {
+      el.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+      });
+    }
+  }, [contentRowIndex]);
 
   useEffect(() => {
     function handleKeys(event) {
@@ -64,6 +75,18 @@ export default function Dashboard() {
             setSidebarFocused(true);
             break;
 
+          case KEYS.UP:
+            if (contentRowIndex > 0) {
+              setContentRowIndex(prev => prev - 1);
+            }
+            break;
+
+          case KEYS.DOWN:
+            if (contentRowIndex < 2) {
+              setContentRowIndex(prev => prev + 1);
+            }
+            break;
+
           case KEYS.BLUE:
             openVoiceSearch();
             break;
@@ -76,7 +99,7 @@ export default function Dashboard() {
 
     document.addEventListener("keydown", handleKeys);
     return () => document.removeEventListener("keydown", handleKeys);
-  }, [menuIndex, sidebarFocused]);
+  }, [menuIndex, sidebarFocused, contentRowIndex]);
 
   function openMenu() {
     const item = MENU[menuIndex];
@@ -94,14 +117,13 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="dashboard-page">
+    <div className="dashboard-page scale-in">
       <aside className="dashboard-sidebar">
         <div className="dashboard-logo">
-          <span />
-          StreamDeck
+          Stream<span>Deck</span>
         </div>
 
-        <nav className="dashboard-menu" aria-label="Main navigation">
+        <nav className="dashboard-menu">
           {MENU.map((item, index) => (
             <button
               type="button"
@@ -111,10 +133,11 @@ export default function Dashboard() {
                   ? "dashboard-menu-item active"
                   : "dashboard-menu-item"
               }
-              onClick={() => {
+              onMouseEnter={() => {
                 setMenuIndex(index);
-                navigateTo(item.path);
+                setSidebarFocused(true);
               }}
+              onClick={() => openMenu()}
             >
               {item.name}
             </button>
@@ -124,26 +147,40 @@ export default function Dashboard() {
 
       <main className="dashboard-content">
         <section className="dashboard-hero">
-          <div>
-            <p className="dashboard-eyebrow">IPTV command center</p>
-            <h1>Welcome back</h1>
+          <div className="hero-content">
+            <p className="dashboard-eyebrow">PREMIUM IPTV EXPERIENCE</p>
+            <h1>Discover your favorite content</h1>
             <p>
-              Pick up live channels, resume watching, and browse your provider
-              library from a screen built for TV, desktop, and mobile.
+              Access thousands of live channels, latest movies, and trending series.
+              Your all-in-one entertainment hub for the best streaming quality.
             </p>
+            
+            <div style={{ display: "flex", gap: "20px", marginTop: "30px" }}>
+               <button className="player-button active" onClick={() => navigateTo("/live")}>WATCH LIVE</button>
+               <button className="player-button" style={{ background: "rgba(255,255,255,0.1)" }} onClick={() => navigateTo("/search")}>SEARCH</button>
+            </div>
           </div>
 
-          <div className="dashboard-stats" aria-label="Platform highlights">
-            <div><strong>Live</strong><span>Channels</span></div>
-            <div><strong>VOD</strong><span>Movies</span></div>
-            <div><strong>EPG</strong><span>Guide</span></div>
+          <div className="dashboard-stats">
+            <div className="stat-card"><strong>2k+</strong><span>Live</span></div>
+            <div className="stat-card"><strong>10k+</strong><span>Movies</span></div>
+            <div className="stat-card"><strong>5k+</strong><span>Series</span></div>
           </div>
         </section>
 
         <div className="dashboard-sections">
-          <RecommendedRow />
-          <ContinueWatching />
-          <RecentChannels />
+          <div className={`row-wrapper-0 ${!sidebarFocused && contentRowIndex === 0 ? "row-focused" : ""}`}>
+             <h2 className="section-title" style={{ paddingLeft: "40px" }}>Recommended for You</h2>
+             <RecommendedRow isFocused={!sidebarFocused && contentRowIndex === 0} />
+          </div>
+          <div className={`row-wrapper-1 ${!sidebarFocused && contentRowIndex === 1 ? "row-focused" : ""}`}>
+             <h2 className="section-title" style={{ paddingLeft: "40px" }}>Continue Watching</h2>
+             <ContinueWatching isFocused={!sidebarFocused && contentRowIndex === 1} />
+          </div>
+          <div className={`row-wrapper-2 ${!sidebarFocused && contentRowIndex === 2 ? "row-focused" : ""}`}>
+             <h2 className="section-title" style={{ paddingLeft: "40px" }}>Recent Channels</h2>
+             <RecentChannels isFocused={!sidebarFocused && contentRowIndex === 2} />
+          </div>
         </div>
       </main>
 
@@ -158,4 +195,3 @@ export default function Dashboard() {
     </div>
   );
 }
-

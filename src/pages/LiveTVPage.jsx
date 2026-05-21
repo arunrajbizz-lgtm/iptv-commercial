@@ -71,12 +71,16 @@ export default function LiveTVPage() {
   }, []);
 
   useEffect(() => {
-    scrollFocused("category", focusedCategory);
-  }, [focusedCategory]);
+    if (zone === "categories") {
+      scrollFocused("category", focusedCategory);
+    }
+  }, [focusedCategory, zone]);
 
   useEffect(() => {
-    scrollFocused("channel", focusedChannel);
-  }, [focusedChannel, filteredChannels]);
+    if (zone === "channels") {
+      scrollFocused("channel", focusedChannel);
+    }
+  }, [focusedChannel, zone, filteredChannels]);
 
   useEffect(() => {
     function handleKeys(event) {

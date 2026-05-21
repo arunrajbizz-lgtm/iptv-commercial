@@ -173,7 +173,7 @@ export default function HomePage() {
 
         behavior: "smooth",
 
-        block: "center"
+        block: "nearest"
       });
 
   }, [focusedChannel]);
@@ -206,37 +206,13 @@ export default function HomePage() {
         // LEFT
         case KEYS.LEFT:
 
-          // CONTENT → CATEGORY
-          if (
-            focusManager.getZone()
-            === "content"
-          ) {
-
-            focusManager.setZone(
-              "categories"
-            );
-
-            return;
-          }
-
-          // CATEGORY → SIDEBAR
-          if (
-            focusManager.getZone()
-            === "categories"
-          ) {
-
-            focusManager.setZone(
-              "sidebar"
-            );
-
-            return;
-          }
-
-          // GRID NAVIGATION
-          if (
-            focusedChannel > 0
-          ) {
-
+          if (focusedChannel % 4 === 0) {
+            if (focusManager.getZone() === "content") {
+              focusManager.setZone("categories");
+            } else if (focusManager.getZone() === "categories") {
+              focusManager.setZone("sidebar");
+            }
+          } else if (focusedChannel > 0) {
             const newIndex =
               focusedChannel - 1;
 
@@ -254,38 +230,14 @@ export default function HomePage() {
         // RIGHT
         case KEYS.RIGHT:
 
-          // SIDEBAR → CATEGORY
-          if (
-            focusManager.getZone()
-            === "sidebar"
+          if (focusManager.getZone() === "sidebar") {
+            focusManager.setZone("categories");
+          } else if (focusManager.getZone() === "categories") {
+            focusManager.setZone("content");
+          } else if (
+            focusedChannel % 4 < 3 && 
+            focusedChannel < channels.length - 1
           ) {
-
-            focusManager.setZone(
-              "categories"
-            );
-
-            return;
-          }
-
-          // CATEGORY → CONTENT
-          if (
-            focusManager.getZone()
-            === "categories"
-          ) {
-
-            focusManager.setZone(
-              "content"
-            );
-
-            return;
-          }
-
-          // GRID NAVIGATION
-          if (
-            focusedChannel <
-            channels.length - 1
-          ) {
-
             const newIndex =
               focusedChannel + 1;
 

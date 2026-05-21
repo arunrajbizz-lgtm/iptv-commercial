@@ -38,6 +38,8 @@ export default function SeriesPage() {
     setZone] =
     useState("categories");
 
+  const COLS = 5;
+
   // INIT
   useEffect(() => {
 
@@ -48,6 +50,27 @@ export default function SeriesPage() {
     loadCategories();
 
   }, []);
+
+  useEffect(() => {
+    if (zone === "categories") {
+      scrollFocused("category", focusedCategory);
+    }
+  }, [focusedCategory, zone]);
+
+  useEffect(() => {
+    if (zone === "series") {
+      scrollFocused("series", focusedSeries);
+    }
+  }, [focusedSeries, zone, series]);
+
+  function scrollFocused(type, index) {
+    const el = document.querySelector(`[data-${type}-index="${index}"]`);
+    if (!el) return;
+    el.scrollIntoView({
+      block: "nearest",
+      behavior: "smooth"
+    });
+  }
 
   // LOAD
   async function loadCategories() {
@@ -209,46 +232,41 @@ export default function SeriesPage() {
         switch (event.keyCode) {
 
           case KEYS.LEFT:
+            if (focusedSeries % COLS === 0) {
+              setZone("categories");
+            } else {
+              setFocusedSeries(prev => prev - 1);
+            }
+            break;
 
-            setZone(
-              "categories"
-            );
-
+          case KEYS.RIGHT:
+            if (focusedSeries % COLS < COLS - 1 && focusedSeries < series.length - 1) {
+              setFocusedSeries(prev => prev + 1);
+            }
             break;
 
           case KEYS.UP:
-
-            if (
-              focusedSeries > 0
-            ) {
-
-              setFocusedSeries(
-                prev => prev - 1
-              );
+            if (focusedSeries >= COLS) {
+              setFocusedSeries(prev => prev - COLS);
             }
-
             break;
 
           case KEYS.DOWN:
-
-            if (
-
-              focusedSeries
-              <
-              series.length - 1
-            ) {
-
-              setFocusedSeries(
-                prev => prev + 1
-              );
+            if (focusedSeries + COLS < series.length) {
+              setFocusedSeries(prev => prev + COLS);
+            } else if (focusedSeries < series.length - 1) {
+               setFocusedSeries(series.length - 1);
             }
-
             break;
 
           case KEYS.ENTER:
 
             openSeries();
 
+            break;
+
+          case KEYS.BACK:
+            setZone("categories");
             break;
 
           default:
@@ -304,108 +322,76 @@ export default function SeriesPage() {
 
   return (
 
-    <div style={{
-      width: "100%",
-      height: "100vh",
-      display: "flex",
-      background: "#000",
-      color: "white"
-    }}>
+    <div className="page-container scale-in" style={{ padding: 0, display: "flex", background: "#050505" }}>
 
-      {/* LEFT */}
+      {/* LEFT - CATEGORIES */}
 
-      <div style={{
-        width: "320px",
-        background: "#111",
-        padding: "20px",
-        overflowY: "auto"
+      <aside style={{
+        width: "360px",
+        height: "100vh",
+        background: "rgba(10,10,10,0.8)",
+        backdropFilter: "blur(20px)",
+        padding: "40px 20px",
+        display: "flex",
+        flexDirection: "column",
+        borderRight: "1px solid rgba(255,255,255,0.05)"
       }}>
 
-        <div style={{
-          fontSize: "42px",
-          fontWeight: "bold",
-          color: "#00aaff",
-          marginBottom: "30px"
-        }}>
-
+        <h1 className="sidebar-logo" style={{ textAlign: "left", paddingLeft: "20px" }}>
           SERIES
+        </h1>
 
+        <div className="category-list" style={{ flex: 1, overflowY: "auto", padding: "10px" }}>
+          {
+            categories.map(
+              (item, index) => (
+
+              <div
+                key={
+                  item.category_id
+                }
+                data-category-index={index}
+                className={`sidebar-item ${zone === "categories" && focusedCategory === index ? "active" : ""}`}
+                style={{
+                   cursor: "pointer",
+                   opacity: zone === "categories" && focusedCategory === index ? 1 : 0.6
+                }}
+              >
+                {item.category_name}
+              </div>
+
+            ))
+          }
         </div>
 
-        {
-          categories.map(
-            (item, index) => (
+      </aside>
 
-            <div
-              key={
-                item.category_id
-              }
-              style={{
+      {/* RIGHT - GRID */}
 
-                padding: "20px",
-
-                marginBottom: "14px",
-
-                borderRadius: "16px",
-
-                background:
-                  zone ===
-                  "categories"
-                  &&
-                  focusedCategory
-                  === index
-                    ? "#00aaff"
-                    : "#1d1d1d",
-
-                border:
-                  zone ===
-                  "categories"
-                  &&
-                  focusedCategory
-                  === index
-                    ? "3px solid white"
-                    : "3px solid transparent",
-
-                fontSize: "24px",
-
-                fontWeight: "bold"
-              }}
-            >
-
-              {
-                item.category_name
-              }
-
-            </div>
-
-          ))
-        }
-
-      </div>
-
-      {/* RIGHT */}
-
-      <div style={{
+      <main style={{
         flex: 1,
-        padding: "30px",
-        overflowY: "auto"
+        height: "100vh",
+        overflowY: "auto",
+        padding: "60px 40px"
       }}>
 
         <div style={{
-          fontSize: "42px",
-          fontWeight: "bold",
-          marginBottom: "30px"
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "50px"
         }}>
-
-          SERIES
-
+          <h2 className="section-title">
+            {categories[focusedCategory]?.category_name || "All Series"}
+          </h2>
+          <div className="section-subtitle">
+            {series.length} TITLES
+          </div>
         </div>
 
-        <div style={{
-          display: "grid",
-          gridTemplateColumns:
-            "repeat(auto-fill,minmax(220px,1fr))",
-          gap: "24px"
+        <div className="content-grid" style={{
+           gridTemplateColumns: `repeat(${COLS}, 1fr)`,
+           gap: "35px"
         }}>
 
           {
@@ -416,32 +402,8 @@ export default function SeriesPage() {
                 key={
                   item.series_id
                 }
-                style={{
-
-                  background:
-                    zone ===
-                    "series"
-                    &&
-                    focusedSeries
-                    === index
-                      ? "#00aaff"
-                      : "#1d1d1d",
-
-                  border:
-                    zone ===
-                    "series"
-                    &&
-                    focusedSeries
-                    === index
-                      ? "3px solid white"
-                      : "2px solid rgba(255,255,255,0.08)",
-
-                  borderRadius:
-                    "18px",
-
-                  overflow:
-                    "hidden"
-                }}
+                data-series-index={index}
+                className={`content-card ${zone === "series" && focusedSeries === index ? "active" : ""}`}
               >
 
                 <img
@@ -449,30 +411,12 @@ export default function SeriesPage() {
                     item.cover
                   }
                   alt=""
-                  style={{
-                    width: "100%",
-                    height: "320px",
-                    objectFit:
-                      "cover",
-                    background:
-                      "#000"
-                  }}
+                  className="content-poster"
+                  style={{ height: "400px" }}
                 />
 
-                <div style={{
-                  padding: "16px"
-                }}>
-
-                  <div style={{
-                    fontSize: "22px",
-                    fontWeight: "bold",
-                    lineHeight: 1.4
-                  }}>
-
+                <div className="content-title">
                     {item.name}
-
-                  </div>
-
                 </div>
 
               </div>
@@ -482,7 +426,9 @@ export default function SeriesPage() {
 
         </div>
 
-      </div>
+        {!series.length && <div className="loader" style={{ background: "transparent", height: "400px" }}>No Series Found</div>}
+
+      </main>
 
     </div>
   );

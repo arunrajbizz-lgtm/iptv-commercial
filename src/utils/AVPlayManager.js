@@ -133,6 +133,12 @@ class AVPlayManager {
           onerror: (error) => {
             console.error("AVPlay Error Event:", error);
             this.handleError(url);
+          },
+          onsubtitlechange: (duration, text, data3, data4) => {
+            console.log("Subtitle Change");
+          },
+          ondrmevent: (type, data) => {
+            console.log("DRM Event:", type);
           }
         });
 
@@ -140,6 +146,23 @@ class AVPlayManager {
         this.player.prepareAsync(
           () => {
             console.log("AVPlay Prepared, starting playback");
+            
+            // --- AUDIO TRACK SELECTION ---
+            try {
+              const totalTracks = this.player.getTotalTrackInfo();
+              console.log("Total Tracks Found:", totalTracks.length);
+              
+              for (let i = 0; i < totalTracks.length; i++) {
+                if (totalTracks[i].type === "AUDIO") {
+                  console.log("Selecting Audio Track:", i, totalTracks[i].extra_info);
+                  this.player.selectTrack("AUDIO", i);
+                  break; // Select first available audio track
+                }
+              }
+            } catch (e) {
+              console.log("Audio Track Selection Error:", e);
+            }
+
             this.player.play();
           },
           (error) => {

@@ -5,6 +5,8 @@ class FocusManager {
     this.zone =
       "sidebar";
 
+    this.sidebarIndex = 0;
+
     this.lastPositions = {
 
       sidebar: 0,
@@ -36,6 +38,15 @@ class FocusManager {
     return this.zone;
   }
 
+  // SIDEBAR
+  setSidebar(index) {
+    this.sidebarIndex = index;
+  }
+
+  getSidebar() {
+    return this.sidebarIndex;
+  }
+
   // SAVE POSITION
   savePosition(
     zone,
@@ -60,6 +71,8 @@ class FocusManager {
 
     this.zone =
       "sidebar";
+
+    this.sidebarIndex = 0;
 
     this.lastPositions = {
 

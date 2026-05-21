@@ -29,11 +29,34 @@
 }
 
 .dashboard-logo span {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #1ed6ff;
-  box-shadow: 0 0 24px rgba(30, 214, 255, 0.8);
+  color: #1ed6ff;
+  font-weight: 300;
+}
+
+.hero-content {
+  max-width: 800px;
+}
+
+.stat-card {
+  min-height: 100px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-5px);
+}
+
+.row-focused {
+  background: rgba(0, 170, 255, 0.05);
+  border-radius: 20px;
+  padding: 20px 0;
+  margin: 0 -20px;
 }
 
 .dashboard-menu {

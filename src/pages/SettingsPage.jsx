@@ -79,6 +79,16 @@ export default function SettingsPage() {
 
   }, []);
 
+  useEffect(() => {
+    const el = document.querySelector(`[data-setting-index="${focused}"]`);
+    if (el) {
+      el.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest"
+      });
+    }
+  }, [focused]);
+
   // LOAD
   function loadSettings() {
 
@@ -379,6 +389,7 @@ export default function SettingsPage() {
 
             <div
               key={item.id}
+              data-setting-index={index}
               style={{
 
                 display: "flex",

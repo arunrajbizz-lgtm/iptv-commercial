@@ -56,6 +56,20 @@ export function playWithTizenAVPlay(url, containerId = "avplay-container", retry
     window.webapis.avplay.prepareAsync(
       function () {
         console.log("AVPlay prepared");
+        
+        // --- AUDIO TRACK SELECTION ---
+        try {
+          const totalTracks = window.webapis.avplay.getTotalTrackInfo();
+          for (let i = 0; i < totalTracks.length; i++) {
+            if (totalTracks[i].type === "AUDIO") {
+              window.webapis.avplay.selectTrack("AUDIO", i);
+              break;
+            }
+          }
+        } catch (e) {
+          console.log("Audio Track Selection Error", e);
+        }
+
         window.webapis.avplay.play();
       },
       function (error) {

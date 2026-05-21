@@ -12,353 +12,149 @@ from "../core/FocusManager";
 
 export default function PlayerControls({
   visible,
-  videoRef,
-  channelName
+  channelName,
+  onAction,
+  paused,
+  streamType,
+  currentTime,
+  duration,
+  progress,
+  isFavorite
 }) {
-
-  const controls = [
-
-    "REWIND",
-
-    "PLAY",
-
-    "PAUSE",
-
-    "FORWARD"
-  ];
 
   const [focused,
     setFocused] =
-    useState(1);
+    useState(2); // Default to PLAY/PAUSE
 
-  const [progress,
-    setProgress] =
-    useState(0);
-
-  const [currentTime,
-    setCurrentTime] =
-    useState("00:00");
-
-  const [duration,
-    setDuration] =
-    useState("00:00");
-
-  // VIDEO TIMER
-  useEffect(() => {
-
-    const interval =
-      setInterval(() => {
-
-        const video =
-          videoRef?.current;
-
-        if (!video) return;
-
-        // PROGRESS
-        if (video.duration) {
-
-          setProgress(
-
-            (
-              video.currentTime
-              /
-              video.duration
-            ) * 100
-          );
-        }
-
-        // CURRENT TIME
-        setCurrentTime(
-          formatTime(
-            video.currentTime || 0
-          )
-        );
-
-        // DURATION
-        setDuration(
-          formatTime(
-            video.duration || 0
-          )
-        );
-
-      }, 1000);
-
-    return () => {
-
-      clearInterval(
-        interval
-      );
-    };
-
-  }, [videoRef]);
+  const controls = [
+    { id: "PREV", label: "⏮" },
+    { id: "RW", label: "⏪" },
+    { id: "PLAY_PAUSE", label: paused ? "▶" : "⏸" },
+    { id: "FF", label: "⏩" },
+    { id: "NEXT", label: "⏭" },
+    { id: "FAVORITE", label: isFavorite ? "❤️" : "🤍" },
+    { id: "EPG", label: "📅" },
+    { id: "MULTIVIEW", label: "📺" }
+  ];
 
   // REMOTE
   useEffect(() => {
+    if (!visible) return;
 
     function handleKeys(event) {
-
-      // ONLY PLAYER/OVERLAY
-      const zone =
-        focusManager.getZone();
-
-      if (
-        zone !== "player"
-        &&
-        zone !== "overlay"
-      ) return;
+      const zone = focusManager.getZone();
+      if (zone !== "player") return;
 
       switch (event.keyCode) {
-
-        // LEFT
         case KEYS.LEFT:
-
           if (focused > 0) {
-
-            setFocused(
-              prev => prev - 1
-            );
+            setFocused(prev => prev - 1);
           }
-
           break;
 
-        // RIGHT
         case KEYS.RIGHT:
-
-          if (
-            focused <
-            controls.length - 1
-          ) {
-
-            setFocused(
-              prev => prev + 1
-            );
+          if (focused < controls.length - 1) {
+            setFocused(prev => prev + 1);
           }
-
           break;
 
-        // ENTER
         case KEYS.ENTER:
-
-          handleControl();
-
+          onAction(controls[focused].id);
           break;
 
         default:
-
           break;
       }
     }
 
-    document.addEventListener(
-      "keydown",
-      handleKeys
-    );
+    document.addEventListener("keydown", handleKeys);
+    return () => document.removeEventListener("keydown", handleKeys);
+  }, [visible, focused, paused, isFavorite]);
 
-    return () => {
-
-      document.removeEventListener(
-        "keydown",
-        handleKeys
-      );
-    };
-
-  }, [focused]);
-
-  // ACTIONS
-  function handleControl() {
-
-    const video =
-      videoRef.current;
-
-    if (!video) return;
-
-    const action =
-      controls[focused];
-
-    // REWIND
-    if (
-      action === "REWIND"
-    ) {
-
-      video.currentTime -= 10;
-    }
-
-    // PLAY
-    else if (
-      action === "PLAY"
-    ) {
-
-      video.play();
-    }
-
-    // PAUSE
-    else if (
-      action === "PAUSE"
-    ) {
-
-      video.pause();
-    }
-
-    // FORWARD
-    else if (
-      action === "FORWARD"
-    ) {
-
-      video.currentTime += 10;
-    }
-  }
-
-  // FORMAT
-  function formatTime(seconds) {
-
-    if (!seconds) {
-
-      return "00:00";
-    }
-
-    const mins =
-      Math.floor(
-        seconds / 60
-      );
-
-    const secs =
-      Math.floor(
-        seconds % 60
-      );
-
-    return `${String(mins)
-      .padStart(2, "0")}:${String(secs)
-      .padStart(2, "0")}`;
-  }
-
-  // HIDE
   if (!visible) return null;
 
   return (
-
-    <div style={{
-      position: "absolute",
-      bottom: 0,
-      left: 0,
-      width: "100%",
-      padding: "30px",
-      boxSizing: "border-box",
-      background:
-        "linear-gradient(to top, rgba(0,0,0,0.95), transparent)",
-      color: "white",
-      zIndex: 999
-    }}>
-
-      {/* CHANNEL */}
-
+    <div className="player-overlay scale-in">
+      {/* HEADER */}
       <div style={{
-        fontSize: "34px",
-        fontWeight: "bold",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "flex-end",
         marginBottom: "20px"
       }}>
-
-        {channelName}
-
+        <div>
+          <div style={{ fontSize: "18px", opacity: 0.6, marginBottom: "4px", textTransform: "uppercase" }}>
+            {streamType === "live" ? "Live TV" : "VOD"}
+          </div>
+          <div style={{ fontSize: "42px", fontWeight: "bold", textShadow: "0 2px 10px rgba(0,0,0,0.5)" }}>
+            {channelName}
+          </div>
+        </div>
+        <div style={{ textAlign: "right", fontSize: "20px", opacity: 0.8 }}>
+          {streamType === "live" ? "Press GREEN for Mini Guide" : ""}
+        </div>
       </div>
 
       {/* PROGRESS */}
+      {streamType !== "live" && (
+        <div style={{ marginBottom: "30px" }}>
+          <div className="progress-bar">
+            <div className="progress-fill" style={{ width: `${progress}%`, position: "relative" }}>
+               <div style={{
+                 position: "absolute",
+                 right: "-8px",
+                 top: "-5px",
+                 width: "20px",
+                 height: "20px",
+                 borderRadius: "50%",
+                 background: "white",
+                 boxShadow: "0 0 10px rgba(0,170,255,0.8)"
+               }} />
+            </div>
+          </div>
+          <div style={{
+            display: "flex",
+            justifyContent: "space-between",
+            marginTop: "12px",
+            fontSize: "18px",
+            fontWeight: "500",
+            fontVariantNumeric: "tabular-nums"
+          }}>
+            <span>{currentTime}</span>
+            <span>{duration}</span>
+          </div>
+        </div>
+      )}
 
-      <div style={{
-        width: "100%",
-        height: "10px",
-        background:
-          "rgba(255,255,255,0.2)",
-        borderRadius: "20px",
-        overflow: "hidden",
-        marginBottom: "15px"
-      }}>
-
-        <div style={{
-          width: `${progress}%`,
-          height: "100%",
-          background: "#00aaff"
-        }} />
-
-      </div>
-
-      {/* TIME */}
-
+      {/* BUTTONS */}
       <div style={{
         display: "flex",
-        justifyContent:
-          "space-between",
-        marginBottom: "30px",
-        fontSize: "18px",
-        opacity: 0.8
+        gap: "12px",
+        justifyContent: "center",
+        alignItems: "center"
       }}>
-
-        <div>
-          {currentTime}
-        </div>
-
-        <div>
-          {duration}
-        </div>
-
-      </div>
-
-      {/* CONTROLS */}
-
-      <div style={{
-        display: "flex",
-        gap: "20px",
-        justifyContent:
-          "center"
-      }}>
-
-        {
-          controls.map(
-            (control, index) => (
-
+        {controls.map((ctrl, index) => {
+          // Hide seek/next/prev for live if desired, but often RW/FF works for timeshift
+          return (
             <div
-              key={control}
+              key={ctrl.id}
+              className={`player-button ${focused === index ? "active" : ""}`}
               style={{
-
-                padding:
-                  "18px 30px",
-
-                borderRadius:
-                  "14px",
-
-                background:
-                  focused === index
-                    ? "#00aaff"
-                    : "#222",
-
-                border:
-                  focused === index
-                    ? "3px solid white"
-                    : "3px solid transparent",
-
-                fontSize: "22px",
-
-                fontWeight:
-                  "bold",
-
-                transition:
-                  "all 0.2s ease",
-
-                boxShadow:
-                  focused === index
-                    ? "0 0 20px rgba(0,170,255,0.8)"
-                    : "none"
+                width: "70px",
+                height: "70px",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                fontSize: "30px",
+                borderRadius: "50%", // Circular buttons for premium look
+                padding: 0
               }}
             >
-
-              {control}
-
+              {ctrl.label}
             </div>
-
-          ))
-        }
-
+          );
+        })}
       </div>
-
     </div>
   );
 }

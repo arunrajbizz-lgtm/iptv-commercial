@@ -36,6 +36,16 @@ export default function SeriesInfoPage() {
 
   }, []);
 
+  useEffect(() => {
+    const el = document.querySelector(`[data-episode-index="${focusedEpisode}"]`);
+    if (el) {
+      el.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest"
+      });
+    }
+  }, [focusedEpisode]);
+
   // LOAD
   function loadSeries() {
 
@@ -196,18 +206,13 @@ export default function SeriesInfoPage() {
 
   return (
 
-    <div style={{
-      width: "100%",
-      minHeight: "100vh",
-      background: "#000",
-      color: "white"
-    }}>
+    <div className="page-container scale-in" style={{ padding: 0, background: "#050505" }}>
 
       {/* HERO */}
 
       <div style={{
         position: "relative",
-        height: "650px",
+        height: "70vh",
         overflow: "hidden"
       }}>
 
@@ -223,7 +228,7 @@ export default function SeriesInfoPage() {
             height: "100%",
             objectFit:
               "cover",
-            opacity: 0.4
+            opacity: 0.3
           }}
         />
 
@@ -236,44 +241,43 @@ export default function SeriesInfoPage() {
           width: "100%",
           height: "100%",
           background:
-            "linear-gradient(to top, #000 5%, transparent 60%)"
+            "linear-gradient(to top, #050505 10%, rgba(5,5,5,0.8) 30%, transparent 100%)"
         }} />
 
         {/* CONTENT */}
 
         <div style={{
           position: "absolute",
-          left: "70px",
-          bottom: "70px",
-          width: "700px"
+          left: "60px",
+          bottom: "60px",
+          maxWidth: "900px"
         }}>
 
           {/* TITLE */}
 
-          <div style={{
-            fontSize: "68px",
-            fontWeight: "bold",
-            marginBottom: "20px"
+          <h1 style={{
+            fontSize: "80px",
+            fontWeight: "900",
+            marginBottom: "20px",
+            lineHeight: 1.1,
+            textShadow: "0 4px 20px rgba(0,0,0,0.8)"
           }}>
-
             {series.name}
-
-          </div>
+          </h1>
 
           {/* DESC */}
 
-          <div style={{
+          <p style={{
             fontSize: "24px",
             lineHeight: 1.6,
-            opacity: 0.85
+            opacity: 0.7,
+            marginBottom: "40px"
           }}>
-
-            {
-              series.plot
-              ||
-              "Series description unavailable."
-            }
-
+            {series.plot || "No description available for this series."}
+          </p>
+          
+          <div style={{ display: "flex", gap: "20px" }}>
+              <button className="player-button active" onClick={() => openEpisode()}>WATCH S1:E{focusedEpisode+1}</button>
           </div>
 
         </div>
@@ -283,28 +287,18 @@ export default function SeriesInfoPage() {
       {/* EPISODES */}
 
       <div style={{
-        padding: "40px"
+        padding: "60px",
+        background: "#050505"
       }}>
 
-        {/* TITLE */}
-
-        <div style={{
-          fontSize: "42px",
-          fontWeight: "bold",
-          marginBottom: "30px"
-        }}>
-
-          EPISODES
-
-        </div>
-
-        {/* LIST */}
+        <h2 className="section-title" style={{ marginBottom: "40px" }}>
+          Episodes
+        </h2>
 
         <div style={{
           display: "flex",
-          flexDirection:
-            "column",
-          gap: "18px"
+          flexDirection: "column",
+          gap: "20px"
         }}>
 
           {
@@ -313,81 +307,45 @@ export default function SeriesInfoPage() {
 
               <div
                 key={episode.id}
+                data-episode-index={index}
+                className={`content-card ${focusedEpisode === index ? "active" : ""}`}
                 style={{
-
                   display: "flex",
-
-                  gap: "24px",
-
-                  padding:
-                    "24px",
-
-                  borderRadius:
-                    "18px",
-
-                  background:
-                    focusedEpisode
-                    === index
-                      ? "#00aaff"
-                      : "#1d1d1d",
-
-                  border:
-                    focusedEpisode
-                    === index
-                      ? "3px solid white"
-                      : "2px solid rgba(255,255,255,0.08)"
+                  flexDirection: "row",
+                  padding: "20px",
+                  alignItems: "center",
+                  gap: "30px",
+                  background: focusedEpisode === index ? "linear-gradient(90deg, #00aaff, #0077aa)" : "rgba(255,255,255,0.05)",
+                  border: focusedEpisode === index ? "3px solid white" : "3px solid transparent"
                 }}
               >
 
-                {/* THUMB */}
-
-                <img
-                  src={
-                    series.cover
-                  }
-                  alt=""
-                  style={{
-                    width: "240px",
-                    height: "140px",
-                    objectFit:
-                      "cover",
-                    borderRadius:
-                      "14px"
-                  }}
-                />
-
-                {/* INFO */}
-
                 <div style={{
-                  flex: 1
+                   fontSize: "40px",
+                   fontWeight: "900",
+                   opacity: 0.3,
+                   width: "80px",
+                   textAlign: "center"
                 }}>
-
-                  <div style={{
-                    fontSize: "28px",
-                    fontWeight: "bold",
-                    marginBottom:
-                      "14px"
-                  }}>
-
-                    {
-                      episode.title
-                    }
-
-                  </div>
-
-                  <div style={{
-                    fontSize: "20px",
-                    opacity: 0.8,
-                    lineHeight: 1.6
-                  }}>
-
-                    {
-                      episode.plot
-                    }
-
-                  </div>
-
+                   {index + 1}
                 </div>
+
+                <div style={{ flex: 1 }}>
+                  <div style={{
+                    fontSize: "26px",
+                    fontWeight: "bold",
+                    marginBottom: "8px"
+                  }}>
+                    {episode.title}
+                  </div>
+                  <div style={{ fontSize: "18px", opacity: 0.6 }}>
+                    {episode.plot}
+                  </div>
+                </div>
+                
+                {focusedEpisode === index && (
+                   <div style={{ fontSize: "30px" }}>▶</div>
+                )}
 
               </div>
 
