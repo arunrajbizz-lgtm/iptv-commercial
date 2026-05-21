@@ -1,381 +1,111 @@
 import { navigateTo } from "../utils/navigation";
-import {
-  useEffect,
-  useState
-} from "react";
-
-import {
-  KEYS
-} from "../utils/tizenRemote";
+import { useEffect, useState } from "react";
+import { KEYS } from "../utils/tizenRemote";
+import Sidebar from "../components/Sidebar";
+import focusManager from "../core/FocusManager";
 
 export default function SearchPage() {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+  const [focused, setFocused] = useState(0);
 
-  const [query,
-    setQuery] =
-    useState("");
-
-  const [results,
-    setResults] =
-    useState([]);
-
-  const [focused,
-    setFocused] =
-    useState(0);
-
-  // INIT
   useEffect(() => {
-
-    const voice =
-      localStorage.getItem(
-        "voice_search"
-      );
-
+    focusManager.setZone("content");
+    const voice = localStorage.getItem("voice_search");
     if (voice) {
-
       setQuery(voice);
-
-      searchContent(
-        voice
-      );
+      searchContent(voice);
     }
-
   }, []);
 
-  // SEARCH
-  function searchContent(
-    text
-  ) {
-
-    const movies =
-      JSON.parse(
-
-        localStorage.getItem(
-          "movies"
-        )
-      ) || [];
-
-    const series =
-      JSON.parse(
-
-        localStorage.getItem(
-          "series"
-        )
-      ) || [];
-
-    const live =
-      JSON.parse(
-
-        localStorage.getItem(
-          "live_channels"
-        )
-      ) || [];
+  function searchContent(text) {
+    const movies = JSON.parse(localStorage.getItem("movies")) || [];
+    const series = JSON.parse(localStorage.getItem("series")) || [];
+    const live = JSON.parse(localStorage.getItem("live_channels")) || [];
 
     const all = [
-
-      ...movies.map(
-        item => ({
-
-          ...item,
-
-          type:
-            "movie"
-        })
-      ),
-
-      ...series.map(
-        item => ({
-
-          ...item,
-
-          type:
-            "series"
-        })
-      ),
-
-      ...live.map(
-        item => ({
-
-          ...item,
-
-          type:
-            "live"
-        })
-      )
+      ...movies.map(item => ({ ...item, type: "movie" })),
+      ...series.map(item => ({ ...item, type: "series" })),
+      ...live.map(item => ({ ...item, type: "live" }))
     ];
 
-    const filtered =
-      all.filter(item => {
-
-        const name =
-
-          (
-            item.name
-            || ""
-          ).toLowerCase();
-
-        return name.includes(
-          text.toLowerCase()
-        );
-      });
-
+    const filtered = all.filter(item => (item.name || "").toLowerCase().includes(text.toLowerCase()));
     setResults(filtered);
-
     setFocused(0);
   }
 
-  // REMOTE
   useEffect(() => {
-
     function handleKeys(event) {
+      if (focusManager.getZone() === "sidebar") return;
 
       switch (event.keyCode) {
-
         case KEYS.UP:
-
-          if (focused > 0) {
-
-            setFocused(
-              prev => prev - 1
-            );
-          }
-
+          if (focused > 0) setFocused(prev => prev - 1);
           break;
-
         case KEYS.DOWN:
-
-          if (
-            focused
-            <
-            results.length - 1
-          ) {
-
-            setFocused(
-              prev => prev + 1
-            );
-          }
-
+          if (focused < results.length - 1) setFocused(prev => prev + 1);
           break;
-
+        case KEYS.LEFT:
+          focusManager.setZone("sidebar");
+          break;
         case KEYS.ENTER:
-
           openItem();
-
           break;
-
         case KEYS.BACK:
-
           navigateTo("/dashboard");
-
           break;
-
         default:
-
           break;
       }
     }
 
-    document.addEventListener(
-      "keydown",
-      handleKeys
-    );
+    document.addEventListener("keydown", handleKeys);
+    return () => document.removeEventListener("keydown", handleKeys);
+  }, [focused, results]);
 
-    return () => {
-
-      document.removeEventListener(
-        "keydown",
-        handleKeys
-      );
-    };
-
-  }, [
-    focused,
-    results
-  ]);
-
-  // OPEN
   function openItem() {
-
-    const item =
-      results[focused];
-
+    const item = results[focused];
     if (!item) return;
 
-    // SERIES
-    if (
-      item.type === "series"
-    ) {
-
-      localStorage.setItem(
-
-        "selected_series",
-
-        JSON.stringify(item)
-      );
-
+    if (item.type === "series") {
+      localStorage.setItem("selected_series", JSON.stringify(item));
       navigateTo("/series-info");
-
       return;
     }
 
-    // PLAYER
-    localStorage.setItem(
-      "stream_id",
-      item.stream_id
-    );
-
-    localStorage.setItem(
-      "stream_name",
-      item.name
-    );
-
-    localStorage.setItem(
-      "stream_type",
-      item.type
-    );
-
+    localStorage.setItem("stream_id", item.stream_id);
+    localStorage.setItem("stream_name", item.name);
+    localStorage.setItem("stream_type", item.type);
     navigateTo("/player");
   }
 
   return (
+    <div className="app-container">
+      <Sidebar active="SEARCH" />
+      <main className="app-main browse-container">
+        <h1 className="hero-title" style={{ fontSize: "60px", marginBottom: "40px" }}>Search</h1>
+        
+        <div style={{ padding: "25px", borderRadius: "12px", background: "rgba(255,255,255,0.05)", fontSize: "30px", marginBottom: "50px", border: "1px solid rgba(255,255,255,0.1)" }}>
+          {query || "Press Blue for Voice Search..."}
+        </div>
 
-    <div style={{
-      width: "100%",
-      minHeight: "100vh",
-      background: "#000",
-      color: "white",
-      padding: "40px"
-    }}>
-
-      {/* TITLE */}
-
-      <div style={{
-        fontSize: "56px",
-        fontWeight: "bold",
-        marginBottom: "30px"
-      }}>
-
-        SEARCH
-
-      </div>
-
-      {/* INPUT */}
-
-      <div style={{
-        padding: "24px",
-        borderRadius: "18px",
-        background: "#1d1d1d",
-        fontSize: "28px",
-        marginBottom: "40px",
-        border:
-          "2px solid rgba(255,255,255,0.08)"
-      }}>
-
-        {query || "Voice Search..."}
-
-      </div>
-
-      {/* RESULTS */}
-
-      <div style={{
-        display: "flex",
-        flexDirection:
-          "column",
-        gap: "20px"
-      }}>
-
-        {
-          results.map(
-            (item, index) => (
-
+        <div className="channel-list-v">
+          {results.map((item, index) => (
             <div
               key={index}
-              style={{
-
-                display: "flex",
-
-                gap: "24px",
-
-                padding:
-                  "20px",
-
-                borderRadius:
-                  "18px",
-
-                background:
-                  focused === index
-                    ? "#00aaff"
-                    : "#1d1d1d",
-
-                border:
-                  focused === index
-                    ? "3px solid white"
-                    : "2px solid rgba(255,255,255,0.08)"
-              }}
+              className={`channel-item ${focused === index ? "focused" : ""}`}
+              onClick={openItem}
+              style={{ height: "130px" }}
             >
-
-              {/* IMAGE */}
-
-              <img
-                src={
-                  item.stream_icon
-                  ||
-                  item.cover
-                }
-                alt=""
-                style={{
-                  width: "140px",
-                  height: "200px",
-                  objectFit:
-                    "cover",
-                  borderRadius:
-                    "14px",
-                  background:
-                    "#000"
-                }}
-              />
-
-              {/* INFO */}
-
-              <div style={{
-                flex: 1
-              }}>
-
-                {/* NAME */}
-
-                <div style={{
-                  fontSize: "30px",
-                  fontWeight: "bold",
-                  marginBottom:
-                    "14px"
-                }}>
-
-                  {item.name}
-
-                </div>
-
-                {/* TYPE */}
-
-                <div style={{
-                  fontSize: "22px",
-                  opacity: 0.8
-                }}>
-
-                  {
-                    item.type
-                      ?.toUpperCase()
-                  }
-
-                </div>
-
+              <img src={item.stream_icon || item.cover} alt="" className="channel-icon" style={{ width: "100px", height: "100px" }} />
+              <div style={{ flex: 1 }}>
+                <div className="channel-name">{item.name}</div>
+                <div style={{ fontSize: "20px", color: "var(--text-dim)", textTransform: "uppercase" }}>{item.type}</div>
               </div>
-
             </div>
-
-          ))
-        }
-
-      </div>
-
+          ))}
+        </div>
+      </main>
     </div>
   );
 }

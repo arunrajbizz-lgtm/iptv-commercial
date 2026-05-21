@@ -1,352 +1,112 @@
 import { navigateTo } from "../utils/navigation";
-import {
-  useEffect,
-  useState
-} from "react";
-
-import {
-  KEYS
-} from "../utils/tizenRemote";
+import { useEffect, useState } from "react";
+import { KEYS } from "../utils/tizenRemote";
+import Sidebar from "../components/Sidebar";
+import focusManager from "../core/FocusManager";
 
 export default function FavoritesPage() {
+  const [favorites, setFavorites] = useState([]);
+  const [focused, setFocused] = useState(0);
 
-  const [favorites,
-    setFavorites] =
-    useState([]);
-
-  const [focused,
-    setFocused] =
-    useState(0);
-
-  // INIT
   useEffect(() => {
-
+    focusManager.setZone("content");
     loadFavorites();
-
   }, []);
 
-  // LOAD
   function loadFavorites() {
-
     try {
-
-      const data =
-        JSON.parse(
-
-          localStorage.getItem(
-            "favorites"
-          )
-        ) || [];
-
+      const data = JSON.parse(localStorage.getItem("favorites")) || [];
       setFavorites(data);
-
-    } catch (error) {
-
-      console.log(error);
-    }
+    } catch (error) { console.log(error); }
   }
 
-  // REMOTE
   useEffect(() => {
-
     function handleKeys(event) {
+      if (focusManager.getZone() === "sidebar") return;
 
       switch (event.keyCode) {
-
         case KEYS.UP:
-
-          if (focused > 0) {
-
-            setFocused(
-              prev => prev - 1
-            );
-          }
-
+          if (focused > 0) setFocused(prev => prev - 1);
           break;
-
         case KEYS.DOWN:
-
-          if (
-            focused
-            <
-            favorites.length - 1
-          ) {
-
-            setFocused(
-              prev => prev + 1
-            );
-          }
-
+          if (focused < favorites.length - 1) setFocused(prev => prev + 1);
           break;
-
+        case KEYS.LEFT:
+          focusManager.setZone("sidebar");
+          break;
         case KEYS.ENTER:
-
           openFavorite();
-
           break;
-
         case KEYS.RED:
-
           removeFavorite();
-
           break;
-
         case KEYS.BACK:
-
           navigateTo("/dashboard");
-
           break;
-
         default:
-
           break;
       }
     }
 
-    document.addEventListener(
-      "keydown",
-      handleKeys
-    );
+    document.addEventListener("keydown", handleKeys);
+    return () => document.removeEventListener("keydown", handleKeys);
+  }, [focused, favorites]);
 
-    return () => {
-
-      document.removeEventListener(
-        "keydown",
-        handleKeys
-      );
-    };
-
-  }, [
-    focused,
-    favorites
-  ]);
-
-  // OPEN
   function openFavorite() {
-
-    const item =
-      favorites[focused];
-
+    const item = favorites[focused];
     if (!item) return;
 
-    // SERIES
-    if (
-      item.type === "series"
-    ) {
-
-      localStorage.setItem(
-
-        "selected_series",
-
-        JSON.stringify(item)
-      );
-
+    if (item.type === "series") {
+      localStorage.setItem("selected_series", JSON.stringify(item));
       navigateTo("/series-info");
-
       return;
     }
 
-    // PLAYER
-    localStorage.setItem(
-      "stream_id",
-      item.stream_id
-    );
-
-    localStorage.setItem(
-      "stream_name",
-      item.name
-    );
-
-    localStorage.setItem(
-      "stream_type",
-      item.type
-    );
-
+    localStorage.setItem("stream_id", item.stream_id);
+    localStorage.setItem("stream_name", item.name);
+    localStorage.setItem("stream_type", item.type);
     navigateTo("/player");
   }
 
-  // REMOVE
   function removeFavorite() {
-
-    const updated =
-      favorites.filter(
-
-        (_, index) =>
-
-          index !== focused
-      );
-
-    localStorage.setItem(
-
-      "favorites",
-
-      JSON.stringify(updated)
-    );
-
+    const updated = favorites.filter((_, index) => index !== focused);
+    localStorage.setItem("favorites", JSON.stringify(updated));
     setFavorites(updated);
-
-    if (
-      focused >= updated.length
-    ) {
-
-      setFocused(
-        Math.max(
-          0,
-          updated.length - 1
-        )
-      );
-    }
+    if (focused >= updated.length) setFocused(Math.max(0, updated.length - 1));
   }
 
   return (
+    <div className="app-container">
+      <Sidebar active="FAVORITES" />
+      <main className="app-main browse-container">
+        <h1 className="hero-title" style={{ fontSize: "60px", marginBottom: "20px" }}>My List</h1>
+        <p style={{ fontSize: "22px", color: "var(--primary)", marginBottom: "40px", fontWeight: "bold" }}>
+          RED BUTTON = REMOVE FROM LIST
+        </p>
 
-    <div style={{
-      width: "100%",
-      minHeight: "100vh",
-      background: "#000",
-      color: "white",
-      padding: "40px"
-    }}>
-
-      {/* TITLE */}
-
-      <div style={{
-        fontSize: "56px",
-        fontWeight: "bold",
-        marginBottom: "16px"
-      }}>
-
-        FAVORITES
-
-      </div>
-
-      {/* HELP */}
-
-      <div style={{
-        fontSize: "22px",
-        opacity: 0.75,
-        marginBottom: "40px"
-      }}>
-
-        RED BUTTON = REMOVE FAVORITE
-
-      </div>
-
-      {/* EMPTY */}
-
-      {
-        favorites.length === 0 && (
-
-          <div style={{
-            fontSize: "28px",
-            opacity: 0.7
-          }}>
-
-            No favorites added.
-
+        {favorites.length === 0 ? (
+          <div style={{ fontSize: "30px", opacity: 0.5, marginTop: "100px", textAlign: "center" }}>
+             Your list is empty. Start adding some favorites!
           </div>
-
-        )
-      }
-
-      {/* LIST */}
-
-      <div style={{
-        display: "flex",
-        flexDirection:
-          "column",
-        gap: "20px"
-      }}>
-
-        {
-          favorites.map(
-            (item, index) => (
-
-            <div
-              key={index}
-              style={{
-
-                display: "flex",
-
-                gap: "24px",
-
-                padding:
-                  "20px",
-
-                borderRadius:
-                  "18px",
-
-                background:
-                  focused === index
-                    ? "#00aaff"
-                    : "#1d1d1d",
-
-                border:
-                  focused === index
-                    ? "3px solid white"
-                    : "2px solid rgba(255,255,255,0.08)"
-              }}
-            >
-
-              {/* IMAGE */}
-
-              <img
-                src={
-                  item.stream_icon
-                  ||
-                  item.cover
-                }
-                alt=""
-                style={{
-                  width: "140px",
-                  height: "200px",
-                  objectFit:
-                    "cover",
-                  borderRadius:
-                    "14px",
-                  background:
-                    "#000"
-                }}
-              />
-
-              {/* INFO */}
-
-              <div style={{
-                flex: 1
-              }}>
-
-                <div style={{
-                  fontSize: "30px",
-                  fontWeight: "bold",
-                  marginBottom:
-                    "14px"
-                }}>
-
-                  {item.name}
-
+        ) : (
+          <div className="channel-list-v">
+            {favorites.map((item, index) => (
+              <div
+                key={index}
+                className={`channel-item ${focused === index ? "focused" : ""}`}
+                onClick={openFavorite}
+                style={{ height: "130px" }}
+              >
+                <img src={item.stream_icon || item.cover} alt="" className="channel-icon" style={{ width: "100px", height: "100px" }} />
+                <div style={{ flex: 1 }}>
+                  <div className="channel-name">{item.name}</div>
+                  <div style={{ fontSize: "20px", color: "var(--text-dim)", textTransform: "uppercase" }}>{item.type}</div>
                 </div>
-
-                <div style={{
-                  fontSize: "22px",
-                  opacity: 0.8
-                }}>
-
-                  {
-                    item.type
-                      ?.toUpperCase()
-                  }
-
-                </div>
-
               </div>
-
-            </div>
-
-          ))
-        }
-
-      </div>
-
+            ))}
+          </div>
+        )}
+      </main>
     </div>
   );
 }

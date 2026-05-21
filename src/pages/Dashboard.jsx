@@ -83,7 +83,7 @@ export default function Dashboard() {
       <main className="app-main">
         {/* HERO SECTION */}
         <section className="hero-banner">
-          <img src="src/assets/hero.png" alt="Hero" className="hero-image" />
+          <img src="assets/hero.png" alt="Hero" className="hero-image" />
           <div className="hero-overlay" />
           
           <div className="hero-content fade-in">

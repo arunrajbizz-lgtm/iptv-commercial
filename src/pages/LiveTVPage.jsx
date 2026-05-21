@@ -155,26 +155,18 @@ export default function LiveTVPage() {
         </h1>
 
         {loading ? <div className="netflix-loader" /> : (
-          <div className="channel-list-v" ref={channelListRef} style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
-             {filteredChannels.map((channel, index) => (
-               <div 
-                 key={`${channel.stream_id}-${index}`}
-                 className={`nav-item ${focusedChannel === index && zone === "content" ? "focused" : ""}`}
-                 style={{ 
-                   height: "110px", 
-                   background: focusedChannel === index && zone === "content" ? "var(--primary)" : "rgba(255,255,255,0.05)",
-                   display: "flex",
-                   alignItems: "center",
-                   padding: "0 40px",
-                   borderRadius: "12px",
-                   boxShadow: focusedChannel === index && zone === "content" ? "var(--glow)" : "none"
-                 }}
-               >
-                  <img src={channel.stream_icon} alt="" style={{ width: "100px", height: "70px", objectFit: "contain", marginRight: "40px", background: "#000", borderRadius: "8px" }} />
-                  <div style={{ fontSize: "32px", fontWeight: "700", color: "#fff" }}>{channel.name}</div>
-               </div>
-             ))}
-          </div>
+             <div className="channel-list-v" ref={channelListRef}>
+                {filteredChannels.map((channel, index) => (
+                  <div 
+                    key={`${channel.stream_id}-${index}`}
+                    className={`channel-item ${focusedChannel === index && zone === "content" ? "focused" : ""}`}
+                    onClick={() => openChannel(channel)}
+                  >
+                     <img src={channel.stream_icon} alt="" className="channel-icon" />
+                     <div className="channel-name">{channel.name}</div>
+                  </div>
+                ))}
+             </div>
         )}
       </main>
     </div>
