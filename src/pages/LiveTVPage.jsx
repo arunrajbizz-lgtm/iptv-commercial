@@ -136,7 +136,7 @@ export default function LiveTVPage() {
 
         setAllChannels(list);
         setCategories([ALL_CATEGORY, FAVORITES_CATEGORY, RECENT_CATEGORY, ...grouped]);
-        setChannels(list);
+        setChannels([]);
         setLoading(false);
         return;
       }
@@ -155,11 +155,8 @@ export default function LiveTVPage() {
       ];
 
       setCategories(cats);
-
-      await selectCategory(ALL_CATEGORY, {
-        skipFocus: true,
-        providerCategories
-      });
+      setChannels([]);
+      setLoading(false);
     } catch (err) {
       setError(err?.message || "Unable to load live TV.");
       setLoading(false);
