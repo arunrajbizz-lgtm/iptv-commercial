@@ -8,11 +8,6 @@ import focusManager from "../core/FocusManager";
 import navigationManager from "../core/NavigationManager";
 import "./LiveTVPage.css";
 
-const ALL_CATEGORY = {
-  category_id: "__all",
-  category_name: "All Channels"
-};
-
 const FAVORITES_CATEGORY = {
   category_id: "__favorites",
   category_name: "Favorites"
@@ -133,11 +128,9 @@ export default function LiveTVPage() {
       if (iptv.type === "m3u") {
         const list = readJson("m3u_channels", []).map((item) => normalizeChannel(item, "m3u"));
         const grouped = buildM3uCategories(list);
-
-        setAllChannels(list);
-        setCategories([ALL_CATEGORY, FAVORITES_CATEGORY, RECENT_CATEGORY, ...grouped]);
-        setChannels(list);
-        setLoading(false);
+        const cats = [FAVORITES_CATEGORY, RECENT_CATEGORY, ...grouped];
+        setCategories(cats);
+        await selectCategory(cats[0], { skipFocus: true });
         return;
       }
 
@@ -147,19 +140,9 @@ export default function LiveTVPage() {
         iptv.password
       );
 
-      const cats = [
-        ALL_CATEGORY,
-        FAVORITES_CATEGORY,
-        RECENT_CATEGORY,
-        ...(providerCategories || [])
-      ];
-
+      const cats = [FAVORITES_CATEGORY, RECENT_CATEGORY, ...(providerCategories || [])];
       setCategories(cats);
-
-      await selectCategory(ALL_CATEGORY, {
-        skipFocus: true,
-        providerCategories
-      });
+      await selectCategory(cats[0], { skipFocus: true });
     } catch (err) {
       setError(err?.message || "Unable to load live TV.");
       setLoading(false);
@@ -202,18 +185,7 @@ export default function LiveTVPage() {
         const source = allChannels.length
           ? allChannels
           : readJson("m3u_channels", []).map((item) => normalizeChannel(item, "m3u"));
-
-        nextChannels = category.category_id === "__all"
-          ? source
-          : source.filter((channel) => String(channel.category_id) === String(category.category_id));
-      } else if (category.category_id === "__all") {
-        const data = await getLiveStreams(
-          iptv.host,
-          iptv.username,
-          iptv.password
-        );
-
-        nextChannels = (data || []).map((item) => normalizeChannel(item, "xtream"));
+        nextChannels = source.filter((channel) => String(channel.category_id) === String(category.category_id));
       } else {
         const data = await getLiveStreams(
           iptv.host,
@@ -324,7 +296,6 @@ export default function LiveTVPage() {
     localStorage.setItem("stream_type", "live");
     localStorage.setItem("stream_url", channel.stream_url || "");
     localStorage.setItem("active_channel", JSON.stringify(channel));
-    localStorage.setItem("live_channels", JSON.stringify(filteredChannels));
 
     saveRecentChannel(channel);
     navigationManager.push("/live");
