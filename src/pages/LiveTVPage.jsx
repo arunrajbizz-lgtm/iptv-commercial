@@ -17,6 +17,7 @@ export default function LiveTVPage() {
   const [catSearch, setCatSearch] = useState("");
 
   const channelListRef = useRef(null);
+  const catListRef = useRef(null);
 
   useEffect(() => {
     focusManager.setZone("content");
@@ -63,7 +64,7 @@ export default function LiveTVPage() {
       switch (event.keyCode) {
         case KEYS.UP:
           if (zone === "drawer") {
-            if (focusedCategory > 0) setFocusedCategory(prev => prev - 1);
+            setFocusedCategory(prev => (prev > 0 ? prev - 1 : filteredCategories.length - 1));
           } else {
             if (focusedChannel > 0) setFocusedChannel(prev => prev - 1);
           }
@@ -71,7 +72,7 @@ export default function LiveTVPage() {
 
         case KEYS.DOWN:
           if (zone === "drawer") {
-            if (focusedCategory < filteredCategories.length - 1) setFocusedCategory(prev => prev + 1);
+            setFocusedCategory(prev => (prev < filteredCategories.length - 1 ? prev + 1 : 0));
           } else {
             if (focusedChannel < filteredChannels.length - 1) setFocusedChannel(prev => prev + 1);
           }
@@ -134,6 +135,13 @@ export default function LiveTVPage() {
      }
   }, [focusedChannel, zone]);
 
+  useEffect(() => {
+    if (zone === "drawer" && catListRef.current) {
+       const item = catListRef.current.children[focusedCategory];
+       if (item) item.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [focusedCategory, zone]);
+
   function openChannel(channel) {
     if (!channel) return;
     localStorage.setItem("stream_id", channel.stream_id);
@@ -165,7 +173,7 @@ export default function LiveTVPage() {
             />
          </div>
 
-         <div className="drawer-list">
+         <div className="drawer-list" ref={catListRef}>
             {filteredCategories.map((cat, index) => (
               <div 
                 key={cat.category_id}

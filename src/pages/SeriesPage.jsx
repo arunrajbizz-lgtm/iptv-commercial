@@ -1,5 +1,5 @@
 import { navigateTo } from "../utils/navigation";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { KEYS } from "../utils/tizenRemote";
 import { getSeriesCategories, getSeries } from "../services/xtreamApi";
 import Sidebar from "../components/Sidebar";
@@ -14,6 +14,7 @@ export default function SeriesPage() {
   const [showDrawer, setShowDrawer] = useState(false);
   const [catSearch, setCatSearch] = useState("");
   const gridRef = useRef(null);
+  const catListRef = useRef(null);
   const COLS = 6;
 
   useEffect(() => {
@@ -55,7 +56,7 @@ export default function SeriesPage() {
       switch (event.keyCode) {
         case KEYS.UP:
           if (zone === "drawer") {
-             if (focusedCategory > 0) setFocusedCategory(prev => prev - 1);
+             setFocusedCategory(prev => (prev > 0 ? prev - 1 : filteredCategories.length - 1));
           } else {
              if (focusedSeries >= COLS) setFocusedSeries(prev => prev - COLS);
           }
@@ -63,7 +64,7 @@ export default function SeriesPage() {
 
         case KEYS.DOWN:
           if (zone === "drawer") {
-             if (focusedCategory < filteredCategories.length - 1) setFocusedCategory(prev => prev + 1);
+             setFocusedCategory(prev => (prev < filteredCategories.length - 1 ? prev + 1 : 0));
           } else {
              if (focusedSeries + COLS < series.length) setFocusedSeries(prev => prev + COLS);
           }
@@ -140,6 +141,13 @@ export default function SeriesPage() {
      }
   }, [focusedSeries, zone]);
 
+  useEffect(() => {
+    if (zone === "drawer" && catListRef.current) {
+       const item = catListRef.current.children[focusedCategory];
+       if (item) item.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [focusedCategory, zone]);
+
   function openSeries(item) {
     if (!item) return;
     localStorage.setItem("selected_series", JSON.stringify(item));
@@ -167,7 +175,7 @@ export default function SeriesPage() {
             />
          </div>
 
-         <div className="drawer-list">
+         <div className="drawer-list" ref={catListRef}>
             {filteredCategories.map((cat, index) => (
               <div 
                 key={cat.category_id}
