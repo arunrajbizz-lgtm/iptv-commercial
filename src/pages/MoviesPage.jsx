@@ -335,27 +335,13 @@ export default function MoviesPage() {
   }
 
   return (
-
-    <div className="page-container scale-in" style={{ padding: 0, display: "flex", background: "#050505" }}>
-
-      {/* LEFT - CATEGORIES */}
-
-      <aside style={{
-        width: "360px",
-        height: "100vh",
-        background: "rgba(10,10,10,0.8)",
-        backdropFilter: "blur(20px)",
-        padding: "40px 20px",
-        display: "flex",
-        flexDirection: "column",
-        borderRight: "1px solid rgba(255,255,255,0.05)"
-      }}>
-
-        <h1 className="sidebar-logo" style={{ textAlign: "left", paddingLeft: "20px" }}>
+    <div className="dashboard-page scale-in" style={{ display: "flex", width: "100%", height: "100vh" }}>
+      <aside className="sidebar glass-panel">
+        <div className="sidebar-logo">
           MOVIES
-        </h1>
+        </div>
 
-        <div className="category-list" style={{ flex: 1, overflowY: "auto", padding: "10px" }}>
+        <div className="category-list" style={{ flex: 1, overflowY: "auto" }}>
           {
             categories.map(
               (item, index) => (
@@ -366,10 +352,6 @@ export default function MoviesPage() {
                 }
                 data-category-index={index}
                 className={`sidebar-item ${zone === "categories" && focusedCategory === index ? "active" : ""}`}
-                style={{
-                   cursor: "pointer",
-                   opacity: zone === "categories" && focusedCategory === index ? 1 : 0.6
-                }}
               >
                 {item.category_name}
               </div>
@@ -377,37 +359,22 @@ export default function MoviesPage() {
             ))
           }
         </div>
-
       </aside>
 
-      {/* RIGHT - GRID */}
+      <main style={{ flex: 1, overflowY: "auto", padding: "80px", background: "rgba(0,0,0,0.3)", backdropFilter: "blur(10px)" }}>
+        <header style={{ marginBottom: "60px" }}>
+          <h1 className="section-title">
+            {categories[focusedCategory]?.category_name || "Latest Movies"}
+          </h1>
+          <p className="section-subtitle">
+            {movies.length} TITLES AVAILABLE IN 4K
+          </p>
+        </header>
 
-      <main style={{
-        flex: 1,
-        height: "100vh",
-        overflowY: "auto",
-        padding: "60px 40px"
-      }}>
-
-        <div style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "50px"
+        <div className="content-grid" style={{ 
+          gridTemplateColumns: `repeat(${COLS}, 1fr)`,
+          gap: "40px" 
         }}>
-          <h2 className="section-title">
-            {categories[focusedCategory]?.category_name || "All Movies"}
-          </h2>
-          <div className="section-subtitle">
-            {movies.length} TITLES
-          </div>
-        </div>
-
-        <div className="content-grid" style={{
-           gridTemplateColumns: `repeat(${COLS}, 1fr)`,
-           gap: "35px"
-        }}>
-
           {
             movies.map(
               (movie, index) => (
@@ -419,31 +386,27 @@ export default function MoviesPage() {
                 data-movie-index={index}
                 className={`content-card ${zone === "movies" && focusedMovie === index ? "active" : ""}`}
               >
-
                 <img
-                  src={
-                    movie.stream_icon
-                  }
+                  src={movie.stream_icon}
                   alt=""
                   className="content-poster"
-                  style={{ height: "400px" }}
+                  style={{ height: "450px" }}
                 />
-
                 <div className="content-title">
                     {movie.name}
                 </div>
-
               </div>
 
             ))
           }
-
         </div>
 
-        {!movies.length && <div className="loader" style={{ background: "transparent", height: "400px" }}>No Movies Found</div>}
-
+        {!movies.length && (
+          <div style={{ display: "flex", justifyContent: "center", padding: "100px" }}>
+            <div className="loader" />
+          </div>
+        )}
       </main>
-
     </div>
   );
 }

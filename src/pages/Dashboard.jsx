@@ -117,23 +117,23 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="dashboard-page scale-in">
-      <aside className="dashboard-sidebar">
-        <div className="dashboard-logo">
-          Stream<span>Deck</span>
+    <div className="dashboard-page scale-in" style={{ display: "flex", width: "100%", height: "100vh" }}>
+      <aside className="sidebar glass-panel">
+        <div className="sidebar-logo">
+          STREAM<span>DECK</span>
         </div>
 
-        <nav className="dashboard-menu">
+        <nav className="dashboard-menu" style={{ flex: 1, display: "flex", flexDirection: "column" }}>
           {MENU.map((item, index) => (
             <button
               type="button"
               key={item.name}
               className={
                 sidebarFocused && menuIndex === index
-                  ? "dashboard-menu-item active"
-                  : "dashboard-menu-item"
+                  ? "sidebar-item active"
+                  : "sidebar-item"
               }
-              onMouseEnter={() => {
+              onFocus={() => {
                 setMenuIndex(index);
                 setSidebarFocused(true);
               }}
@@ -145,40 +145,40 @@ export default function Dashboard() {
         </nav>
       </aside>
 
-      <main className="dashboard-content">
-        <section className="dashboard-hero">
+      <main className="dashboard-content" style={{ flex: 1, overflowY: "auto", padding: "80px", background: "rgba(0,0,0,0.2)" }}>
+        <section className="dashboard-hero" style={{ 
+          marginBottom: "80px", 
+          padding: "100px 80px", 
+          borderRadius: "40px",
+          background: "linear-gradient(135deg, rgba(0, 170, 255, 0.3), rgba(0, 0, 0, 0.9)), url('assets/hero.png') center/cover",
+          border: "1px solid rgba(255,255,255,0.1)",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.5)"
+        }}>
           <div className="hero-content">
-            <p className="dashboard-eyebrow">PREMIUM IPTV EXPERIENCE</p>
-            <h1>Discover your favorite content</h1>
-            <p>
-              Access thousands of live channels, latest movies, and trending series.
-              Your all-in-one entertainment hub for the best streaming quality.
+            <p className="dashboard-eyebrow" style={{ color: "var(--primary)", fontWeight: "900", letterSpacing: "4px", marginBottom: "20px" }}>PREMIUM IPTV EXPERIENCE</p>
+            <h1 style={{ fontSize: "100px", fontWeight: "900", margin: "20px 0", lineHeight: "1", letterSpacing: "-3px" }}>Discover Your World</h1>
+            <p style={{ fontSize: "32px", color: "var(--text-dim)", maxWidth: "1000px", lineHeight: "1.4", marginBottom: "40px" }}>
+              Experience the next generation of IPTV. 4K HDR streaming, lightning-fast channel switching, and a premium interface designed for your Samsung QLED.
             </p>
             
-            <div style={{ display: "flex", gap: "20px", marginTop: "30px" }}>
-               <button className="player-button active" onClick={() => navigateTo("/live")}>WATCH LIVE</button>
-               <button className="player-button" style={{ background: "rgba(255,255,255,0.1)" }} onClick={() => navigateTo("/search")}>SEARCH</button>
+            <div style={{ display: "flex", gap: "30px", marginTop: "50px" }}>
+               <button className="player-button active" style={{ width: "auto", padding: "0 60px", height: "90px", fontSize: "28px" }} onClick={() => navigateTo("/live")}>WATCH LIVE</button>
+               <button className="player-button" style={{ width: "auto", padding: "0 60px", height: "90px", fontSize: "28px", background: "rgba(255,255,255,0.1)" }} onClick={() => navigateTo("/search")}>EXPLORE VOD</button>
             </div>
-          </div>
-
-          <div className="dashboard-stats">
-            <div className="stat-card"><strong>2k+</strong><span>Live</span></div>
-            <div className="stat-card"><strong>10k+</strong><span>Movies</span></div>
-            <div className="stat-card"><strong>5k+</strong><span>Series</span></div>
           </div>
         </section>
 
-        <div className="dashboard-sections">
-          <div className={`row-wrapper-0 ${!sidebarFocused && contentRowIndex === 0 ? "row-focused" : ""}`}>
-             <h2 className="section-title" style={{ paddingLeft: "40px" }}>Recommended for You</h2>
+        <div className="dashboard-sections" style={{ display: "flex", flexDirection: "column", gap: "80px" }}>
+          <div className={`row-wrapper-0 ${!sidebarFocused && contentRowIndex === 0 ? "row-focused active" : ""}`}>
+             <h2 className="section-title" style={{ paddingLeft: "40px", marginBottom: "30px" }}>Recommended for You</h2>
              <RecommendedRow isFocused={!sidebarFocused && contentRowIndex === 0} />
           </div>
-          <div className={`row-wrapper-1 ${!sidebarFocused && contentRowIndex === 1 ? "row-focused" : ""}`}>
-             <h2 className="section-title" style={{ paddingLeft: "40px" }}>Continue Watching</h2>
+          <div className={`row-wrapper-1 ${!sidebarFocused && contentRowIndex === 1 ? "row-focused active" : ""}`}>
+             <h2 className="section-title" style={{ paddingLeft: "40px", marginBottom: "30px" }}>Continue Watching</h2>
              <ContinueWatching isFocused={!sidebarFocused && contentRowIndex === 1} />
           </div>
-          <div className={`row-wrapper-2 ${!sidebarFocused && contentRowIndex === 2 ? "row-focused" : ""}`}>
-             <h2 className="section-title" style={{ paddingLeft: "40px" }}>Recent Channels</h2>
+          <div className={`row-wrapper-2 ${!sidebarFocused && contentRowIndex === 2 ? "row-focused active" : ""}`}>
+             <h2 className="section-title" style={{ paddingLeft: "40px", marginBottom: "30px" }}>Recently Played</h2>
              <RecentChannels isFocused={!sidebarFocused && contentRowIndex === 2} />
           </div>
         </div>

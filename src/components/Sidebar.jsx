@@ -139,25 +139,10 @@ export default function Sidebar({
   ]);
 
   return (
-
-    <div style={{
-      width: "260px",
-      height: "100vh",
-      background: "#111",
-      color: "white",
-      paddingTop: "30px",
-      boxSizing: "border-box",
-      borderRight:
-        "2px solid #222"
-    }}>
-
-      <h1 style={{
-        textAlign: "center",
-        marginBottom: "40px",
-        fontSize: "40px"
-      }}>
-        IPTV
-      </h1>
+    <div className="sidebar glass-panel">
+      <div className="sidebar-logo">
+        STREAM<span>DECK</span>
+      </div>
 
       {
         items.map(
@@ -165,39 +150,12 @@ export default function Sidebar({
 
           <div
             key={item}
+            className={`sidebar-item ${focused === index && focusManager.getZone() === "sidebar" ? "active" : ""}`}
             style={{
-
-              padding: "22px",
-
-              fontSize: "24px",
-
-              background:
-                focused === index
-                  &&
-                focusManager.getZone()
-                  === "sidebar"
-                  ||
-                active === item
-                    ? "#00aaff"
-                    : "transparent",
-
-              borderLeft:
-                focused === index
-                  &&
-                focusManager.getZone()
-                  === "sidebar"
-                  ||
-                active === item
-                    ? "6px solid white"
-                    : "6px solid transparent",
-
-              transition:
-                "all 0.2s ease"
+               opacity: (focused === index && focusManager.getZone() === "sidebar") || active === item ? 1 : 0.5
             }}
           >
-
             {item}
-
           </div>
 
         ))

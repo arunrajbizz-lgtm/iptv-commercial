@@ -36,12 +36,12 @@ function initializeTV() {
     ) {
 
       console.log(
-        "Samsung Tizen Detected"
+        "Samsung Tizen Detected - Initializing 4K Optimization"
       );
 
       registerRemoteKeys();
 
-      // SCREEN SAVER
+      // SCREEN SAVER & POWER
       try {
 
         if (
@@ -49,22 +49,25 @@ function initializeTV() {
           &&
           window.webapis.appcommon
         ) {
+          
+          const common = window.webapis.appcommon;
 
-          window.webapis
-            .appcommon
-            .setScreenSaver(
-
-              window.webapis
-                .appcommon
-                .AppCommonScreenSaverState
-                .SCREEN_SAVER_OFF
-            );
+          common.setScreenSaver(
+            common.AppCommonScreenSaverState.SCREEN_SAVER_OFF
+          );
+          
+          console.log("Screen Saver Disabled");
         }
 
       } catch (error) {
-
-        console.log(error);
+        console.log("Power Management Error", error);
       }
+      
+      // PREVENT FOCUS LOSS
+      window.addEventListener("blur", () => {
+         console.log("App Lost Focus - Restoring...");
+         window.focus();
+      });
     }
 
   } catch (error) {

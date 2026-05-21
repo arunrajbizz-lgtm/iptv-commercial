@@ -65,43 +65,38 @@ class AVPlayManager {
         // --- PROPERTIES MUST BE SET AFTER OPEN BUT BEFORE PREPARE ---
 
         // DISPLAY
+        // Fixed 1920x1080 for Tizen UI coordinate space often fixes 'audio only' (black screen) issues
         let rect = { left: 0, top: 0, width: 1920, height: 1080 };
-        if (this.container) {
-          rect = this.container.getBoundingClientRect();
-        }
-
+        
         try {
           this.player.setDisplayMethod("PLAYER_DISPLAY_MODE_AUTO_ASPECT_RATIO");
         } catch (e) { console.log("Set DisplayMethod error", e); }
 
+        console.log("Setting Display Rect:", rect);
         this.player.setDisplayRect(
-          Math.round(rect.left),
-          Math.round(rect.top),
-          Math.round(rect.width),
-          Math.round(rect.height)
+          rect.left,
+          rect.top,
+          rect.width,
+          rect.height
         );
 
         // OPTIMIZATIONS
         try {
+          // Mandatory for some 4K Samsung TVs to show video
+          this.player.setStreamingProperty("SET_MODE_4K", "TRUE");
+          
           const isHLS = url.includes(".m3u8");
           const isTS = url.includes("/live/") || url.endsWith(".ts");
 
-          // 1. Adaptive Bitrate Logic
-          // Reverted to LOWEST for faster start times and better compatibility
-          let adaptiveConf = "BITRATES=1000~100000|STARTBITRATE=LOWEST|SKIPBITRATE=LOWEST";
-          
-          this.player.setStreamingProperty("ADAPTIVE_INFO", adaptiveConf);
+          // Better adaptive logic for 4K
+          this.player.setStreamingProperty("ADAPTIVE_INFO", "BITRATES=1000~100000|STARTBITRATE=HIGHEST");
 
-          // 2. Live Optimization
           if (isHLS || isTS) {
             this.player.setStreamingProperty("IS_LIVE", "TRUE");
           }
-
-          // 3. 4K Support (Only set mode, let player handle resolution)
-          this.player.setStreamingProperty("SET_MODE_4K", "TRUE");
-
-          // 4. Detailed Error Listening
-          this.player.setStreamingProperty("LISTEN_SP_ERROR", "TRUE");
+          
+          // Clear any previous subtitles
+          this.player.setSubtitleDisplay(false);
 
         } catch (e) {
           console.log("Set Streaming Property Error:", e);

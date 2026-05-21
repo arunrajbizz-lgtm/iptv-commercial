@@ -307,14 +307,13 @@ export default function LiveTVPage() {
   }
 
   return (
-    <main className="live-tv-page">
-      <aside className="live-category-panel">
-        <div className="live-panel-title">
-          <span>Live TV</span>
-          <strong>{categories.length}</strong>
+    <main className="live-tv-page scale-in" style={{ display: "flex", width: "100%", height: "100vh", background: "transparent" }}>
+      <aside className="sidebar glass-panel" style={{ width: "400px" }}>
+        <div className="sidebar-logo">
+          LIVE<span>TV</span>
         </div>
 
-        <div className="category-list">
+        <div className="category-list" style={{ flex: 1, overflowY: "auto" }}>
           {categories.map((item, index) => (
             <button
               type="button"
@@ -322,9 +321,10 @@ export default function LiveTVPage() {
               data-category-index={index}
               className={
                 zone === "categories" && focusedCategory === index
-                  ? "category-row active"
-                  : "category-row"
+                  ? "sidebar-item active"
+                  : "sidebar-item"
               }
+              style={{ width: "calc(100% - 40px)" }}
               onFocus={() => {
                 setFocusedCategory(index);
                 setZone("categories");
@@ -340,31 +340,32 @@ export default function LiveTVPage() {
         </div>
       </aside>
 
-      <section className="live-channel-panel">
-        <header className="live-header">
+      <section className="live-channel-panel" style={{ flex: 1, padding: "60px", background: "rgba(0,0,0,0.4)", backdropFilter: "blur(10px)" }}>
+        <header style={{ marginBottom: "50px", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
           <div>
-            <h1>{categories[focusedCategory]?.category_name || "Channels"}</h1>
-            <p>{filteredChannels.length} channels</p>
+            <h1 className="section-title">{categories[focusedCategory]?.category_name || "Channels"}</h1>
+            <p className="section-subtitle">{filteredChannels.length} channels available</p>
           </div>
 
-          <label className="channel-search">
-            <span>Search</span>
+          <div className="search-box" style={{ width: "450px" }}>
             <input
+              className="search-input"
+              style={{ fontSize: "24px", padding: "20px 30px" }}
               value={query}
-              placeholder="Channel name"
+              placeholder="Search channel..."
               onChange={(event) => {
                 setQuery(event.target.value);
                 setFocusedChannel(0);
               }}
             />
-          </label>
+          </div>
         </header>
 
         {error ? <div className="live-state error">{error}</div> : null}
-        {loading ? <div className="live-state">Loading...</div> : null}
+        {loading ? <div style={{ display: "flex", justifyContent: "center", padding: "100px" }}><div className="loader" /></div> : null}
 
         {!loading && !error && (
-          <div className="channel-list">
+          <div className="channel-list" style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "20px" }}>
             {filteredChannels.map((channel, index) => {
               const favorite = getFavorites().some((item) => (
                 String(item.stream_id) === String(channel.stream_id)
@@ -381,38 +382,40 @@ export default function LiveTVPage() {
                       ? "channel-row active"
                       : "channel-row"
                   }
+                  style={{
+                     display: "flex",
+                     alignItems: "center",
+                     padding: "25px",
+                     background: zone === "channels" && focusedChannel === index ? "var(--primary)" : "rgba(255,255,255,0.05)",
+                     borderRadius: "20px",
+                     border: zone === "channels" && focusedChannel === index ? "3px solid #fff" : "3px solid transparent",
+                     transition: "all 0.3s ease",
+                     transform: zone === "channels" && focusedChannel === index ? "scale(1.03)" : "scale(1)",
+                     boxShadow: zone === "channels" && focusedChannel === index ? "0 10px 30px var(--primary-glow)" : "none"
+                  }}
                   onFocus={() => {
                     setFocusedChannel(index);
                     setZone("channels");
                   }}
                   onClick={() => openChannel(channel)}
                 >
-                  <div className="channel-logo">
-                    {channel.stream_icon ? <img src={channel.stream_icon} alt="" /> : <span>TV</span>}
+                  <div className="channel-logo" style={{ width: "80px", height: "80px", background: "#000", borderRadius: "15px", marginRight: "25px", flexShrink: 0 }}>
+                    {channel.stream_icon ? <img src={channel.stream_icon} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} /> : <span style={{ fontSize: "24px", fontWeight: "bold" }}>TV</span>}
                   </div>
 
-                  <div className="channel-main">
-                    <strong>{channel.name}</strong>
-                    <span>{channel.category_name}</span>
+                  <div className="channel-main" style={{ flex: 1 }}>
+                    <strong style={{ fontSize: "28px", display: "block", marginBottom: "5px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{channel.name}</strong>
+                    <span style={{ fontSize: "18px", opacity: 0.6 }}>{channel.category_name}</span>
                   </div>
 
-                  <button
-                    type="button"
-                    className={favorite ? "fav-btn active" : "fav-btn"}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      toggleFavorite(channel);
-                      setChannels((prev) => [...prev]);
-                    }}
-                    aria-label="Toggle favorite"
-                  >
-                    {favorite ? "Saved" : "Save"}
-                  </button>
+                  {favorite && (
+                    <div style={{ color: "#fff", fontSize: "30px", marginLeft: "20px" }}>❤️</div>
+                  )}
                 </div>
               );
             })}
 
-            {!filteredChannels.length ? <div className="live-state">No channels</div> : null}
+            {!filteredChannels.length && !loading ? <div className="live-state">No channels found for "{query}"</div> : null}
           </div>
         )}
       </section>

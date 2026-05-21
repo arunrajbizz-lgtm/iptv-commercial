@@ -91,6 +91,7 @@ export function registerTizenKeys() {
     );
   }
 }
+// REGISTER
 export function registerRemoteKeys() {
   try {
     if (
@@ -112,7 +113,12 @@ export function registerRemoteKeys() {
         "ChannelDown",
         "Guide",
         "Info",
-        "Exit"
+        "Exit",
+        "Menu",
+        "Search",
+        "Caption",
+        "Extra",
+        "Teletext"
       ];
 
       keys.forEach(function (key) {
@@ -122,8 +128,15 @@ export function registerRemoteKeys() {
           // Some TV models do not expose every optional key.
         }
       });
+      
+      console.log("Samsung TV Remote Keys Registered Successfully");
     }
   } catch (e) {
     console.log("registerRemoteKeys failed", e);
   }
+
+  // Debug Key Logger
+  document.addEventListener("keydown", (e) => {
+    console.log("Remote Key Pressed:", e.keyCode, "Key:", e.key);
+  });
 }

@@ -253,103 +253,44 @@ export default function AudioSubtitleSelector({
 
   return (
 
-    <div style={{
-      position: "fixed",
-      top: 0,
-      left: 0,
-      width: "100%",
-      height: "100%",
-      background:
-        "rgba(0,0,0,0.82)",
-      zIndex: 999999,
-      display: "flex",
-      justifyContent:
-        "center",
-      alignItems:
-        "center",
-      backdropFilter:
-        "blur(12px)"
-    }}>
+    <div className="modal-overlay scale-in" style={{ zIndex: 1000000 }}>
 
       {/* CARD */}
 
-      <div style={{
-        width: "800px",
-        background:
-          "linear-gradient(to bottom, #1e1e1e, #101010)",
-        borderRadius: "24px",
-        padding: "40px",
-        color: "white",
-        border:
-          "2px solid rgba(255,255,255,0.08)"
+      <div className="glass-panel" style={{
+        width: "1000px",
+        borderRadius: "40px",
+        padding: "60px",
+        color: "white"
       }}>
+
+        <h1 className="section-title" style={{ textAlign: "center", marginBottom: "60px" }}>STREAM SETTINGS</h1>
 
         {/* HEADER */}
 
         <div style={{
           display: "flex",
-          gap: "20px",
-          marginBottom: "35px"
+          gap: "30px",
+          marginBottom: "50px",
+          justifyContent: "center"
         }}>
 
           {/* AUDIO */}
 
-          <div style={{
-
-            padding:
-              "16px 30px",
-
-            borderRadius:
-              "14px",
-
-            background:
-              tab === 0
-                ? "#00aaff"
-                : "#222",
-
-            border:
-              tab === 0
-                ? "3px solid white"
-                : "3px solid transparent",
-
-            fontSize: "24px",
-
-            fontWeight:
-              "bold"
-          }}>
-
+          <div 
+            className={`player-button ${tab === 0 ? "active" : ""}`}
+            style={{ width: "auto", padding: "0 40px", height: "80px" }}
+          >
             AUDIO
-
           </div>
 
           {/* SUBTITLE */}
 
-          <div style={{
-
-            padding:
-              "16px 30px",
-
-            borderRadius:
-              "14px",
-
-            background:
-              tab === 1
-                ? "#00aaff"
-                : "#222",
-
-            border:
-              tab === 1
-                ? "3px solid white"
-                : "3px solid transparent",
-
-            fontSize: "24px",
-
-            fontWeight:
-              "bold"
-          }}>
-
+          <div 
+            className={`player-button ${tab === 1 ? "active" : ""}`}
+            style={{ width: "auto", padding: "0 40px", height: "80px" }}
+          >
             SUBTITLES
-
           </div>
 
         </div>
@@ -360,21 +301,22 @@ export default function AudioSubtitleSelector({
           display: "flex",
           flexDirection:
             "column",
-          gap: "16px",
+          gap: "20px",
           maxHeight: "500px",
-          overflowY: "auto"
+          overflowY: "auto",
+          padding: "10px"
         }}>
 
           {
             items.length === 0 && (
 
               <div style={{
-                fontSize: "24px",
-                opacity: 0.7
+                fontSize: "28px",
+                opacity: 0.5,
+                textAlign: "center",
+                padding: "50px"
               }}>
-
-                No Tracks Available
-
+                No tracks detected for this stream.
               </div>
 
             )
@@ -386,39 +328,13 @@ export default function AudioSubtitleSelector({
 
               <div
                 key={index}
+                className={`sidebar-item ${focused === index ? "active" : ""}`}
                 style={{
-
-                  padding:
-                    "20px",
-
-                  borderRadius:
-                    "14px",
-
-                  background:
-                    focused === index
-                      ? "#00aaff"
-                      : "#222",
-
-                  border:
-                    focused === index
-                      ? "3px solid white"
-                      : "3px solid transparent",
-
-                  fontSize: "22px",
-
-                  fontWeight:
-                    "bold",
-
-                  transition:
-                    "all 0.2s ease",
-
-                  boxShadow:
-                    focused === index
-                      ? "0 0 24px rgba(0,170,255,0.8)"
-                      : "none"
+                   margin: 0,
+                   textAlign: "center",
+                   justifyContent: "center"
                 }}
               >
-
                 {
                   item.label
                   ||
@@ -426,12 +342,15 @@ export default function AudioSubtitleSelector({
                   ||
                   `Track ${index + 1}`
                 }
-
               </div>
 
             ))
           }
 
+        </div>
+
+        <div style={{ marginTop: "60px", textAlign: "center", fontSize: "20px", color: "var(--text-dim)", fontWeight: "bold", letterSpacing: "2px" }}>
+          PRESS BACK TO RETURN
         </div>
 
       </div>

@@ -188,23 +188,52 @@ export default function PlayerPage() {
       }
 
       if (finalUrl.endsWith(".m3u8") && Hls.isSupported()) {
-        console.log("Using hls.js for M3U8 stream in browser.");
-        const hls = new Hls();
+        console.log("Using optimized hls.js for M3U8 stream.");
+        
+        // --- OPTIMIZED HLS CONFIG ---
+        const hlsConfig = {
+          manifestLoadingMaxRetry: 10,
+          manifestLoadingRetryDelay: 1000,
+          levelLoadingMaxRetry: 5,
+          fragLoadingMaxRetry: 5,
+          enableWorker: true,
+          lowLatencyMode: true,
+          backBufferLength: 90
+        };
+
+        const hls = new Hls(hlsConfig);
+        
         hls.on(Hls.Events.ERROR, function (event, data) {
           if (data.fatal) {
-            console.error("Fatal hls.js error:", data);
-            hls.destroy();
-            alert("Playback failed: " + data.details);
+            switch (data.type) {
+              case Hls.ErrorTypes.NETWORK_ERROR:
+                console.log("Fatal network error, trying to recover...");
+                hls.startLoad();
+                break;
+              case Hls.ErrorTypes.MEDIA_ERROR:
+                console.log("Fatal media error, trying to recover...");
+                hls.recoverMediaError();
+                break;
+              default:
+                console.error("Unrecoverable fatal error:", data);
+                hls.destroy();
+                break;
+            }
           }
         });
+
         hls.loadSource(finalUrl);
         hls.attachMedia(video);
-        video.play().catch(e => console.error("Browser play failed after manifest parsed", e));
+        
+        video.play().catch(e => {
+          console.log("Autoplay prevented, user interaction might be needed", e);
+        });
+        
         setHlsInstance(hls);
       } else {
-        console.log("Using native HTML5 video for stream in browser.");
+        console.log("Using native HTML5 video for stream.");
         video.src = finalUrl;
-        video.play().catch(e => console.error("Browser play failed", e));
+        video.play().catch(e => console.error("Native play failed", e));
       }
     } else {
       // Tizen Native
@@ -897,7 +926,7 @@ export default function PlayerPage() {
       width: "100%",
       height: "100vh",
       background:
-        "#000",
+        "transparent", // Transparent background is vital for Tizen AVPlay visibility
       position:
         "relative",
       overflow:
@@ -910,7 +939,12 @@ export default function PlayerPage() {
         id="avplay-container"
         style={{
           width: "100%",
-          height: "100%"
+          height: "100%",
+          position: "absolute",
+          top: 0,
+          left: 0,
+          zIndex: 1, // Video should be at the bottom
+          background: "transparent"
         }}
       />
 
@@ -918,7 +952,7 @@ export default function PlayerPage() {
       {isBrowser && (
         <video
           id="browser-video"
-          style={{ width: "100%", height: "100%", objectFit: "contain" }}
+          style={{ width: "100%", height: "100%", objectFit: "contain", position: "absolute", top: 0, left: 0, zIndex: 2 }}
           onPause={() => setPaused(true)}
           onPlay={() => setPaused(false)}
           controls={false}
@@ -938,7 +972,7 @@ export default function PlayerPage() {
             width: "100%",
             height: "100%",
             background:
-              "rgba(0,0,0,0.7)",
+              "rgba(0,0,0,0.8)",
             display: "flex",
             justifyContent:
               "center",
@@ -955,17 +989,19 @@ export default function PlayerPage() {
       }
 
       {/* NEW CONTROLS */}
-      <PlayerControls
-        visible={showControls}
-        channelName={streamName}
-        onAction={handleAction}
-        paused={paused}
-        streamType={streamType}
-        currentTime={currentTime}
-        duration={duration}
-        progress={progress}
-        isFavorite={favorite}
-      />
+      <div style={{ position: "relative", zIndex: 10000 }}>
+        <PlayerControls
+          visible={showControls}
+          channelName={streamName}
+          onAction={handleAction}
+          paused={paused}
+          streamType={streamType}
+          currentTime={currentTime}
+          duration={duration}
+          progress={progress}
+          isFavorite={favorite}
+        />
+      </div>
 
       {/* MINI GUIDE */}
 
