@@ -855,6 +855,8 @@ export default function PlayerPage() {
     }
   }
 
+  const [showSettings, setShowSettings] = useState(false);
+
   const handleAction = (id) => {
     autoHide();
     const video = hlsInstance && hlsInstance.media
@@ -905,6 +907,11 @@ export default function PlayerPage() {
         toggleCurrentFavorite();
         break;
 
+      case "AUDIO_SUB":
+        setShowSettings(true);
+        focusManager.setZone("modal");
+        break;
+
       case "EPG":
         setShowEPG(true);
         focusManager.setZone("overlay");
@@ -926,7 +933,7 @@ export default function PlayerPage() {
       width: "100%",
       height: "100vh",
       background:
-        "transparent", // Transparent background is vital for Tizen AVPlay visibility
+        "transparent",
       position:
         "relative",
       overflow:
@@ -943,7 +950,7 @@ export default function PlayerPage() {
           position: "absolute",
           top: 0,
           left: 0,
-          zIndex: 1, // Video should be at the bottom
+          zIndex: 1,
           background: "transparent"
         }}
       />
@@ -963,28 +970,7 @@ export default function PlayerPage() {
 
       {
         loading && (
-
-          <div style={{
-            position:
-              "absolute",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            background:
-              "rgba(0,0,0,0.8)",
-            display: "flex",
-            justifyContent:
-              "center",
-            alignItems:
-              "center",
-            zIndex: 99999
-          }}>
-
-            <div className="loader" />
-
-          </div>
-
+          <div className="netflix-loader" style={{ zIndex: 99999 }} />
         )
       }
 
@@ -1002,6 +988,13 @@ export default function PlayerPage() {
           isFavorite={favorite}
         />
       </div>
+
+      {/* SETTINGS */}
+      <AudioSubtitleSelector
+        visible={showSettings}
+        videoRef={{ current: hlsInstance?.media || (isBrowser ? document.getElementById("browser-video") : null) }}
+        onClose={() => setShowSettings(false)}
+      />
 
       {/* MINI GUIDE */}
 

@@ -27,14 +27,14 @@ export default function PlayerControls({
     useState(2); // Default to PLAY/PAUSE
 
   const controls = [
-    { id: "PREV", label: "⏮" },
-    { id: "RW", label: "⏪" },
-    { id: "PLAY_PAUSE", label: paused ? "▶" : "⏸" },
-    { id: "FF", label: "⏩" },
-    { id: "NEXT", label: "⏭" },
-    { id: "FAVORITE", label: isFavorite ? "❤️" : "🤍" },
-    { id: "EPG", label: "📅" },
-    { id: "MULTIVIEW", label: "📺" }
+    { id: "PREV", label: "⏮", icon: "prev" },
+    { id: "RW", label: "⏪", icon: "rw" },
+    { id: "PLAY_PAUSE", label: paused ? "▶" : "⏸", icon: "play" },
+    { id: "FF", label: "⏩", icon: "ff" },
+    { id: "NEXT", label: "⏭", icon: "next" },
+    { id: "FAVORITE", label: isFavorite ? "❤️" : "🤍", icon: "fav" },
+    { id: "AUDIO_SUB", label: "💬", icon: "audio" },
+    { id: "MULTIVIEW", label: "📺", icon: "multi" }
   ];
 
   // REMOTE
@@ -58,6 +58,10 @@ export default function PlayerControls({
           }
           break;
 
+        case KEYS.UP:
+           // Allow jumping to progress bar if we implement seeking
+           break;
+
         case KEYS.ENTER:
           onAction(controls[focused].id);
           break;
@@ -74,86 +78,58 @@ export default function PlayerControls({
   if (!visible) return null;
 
   return (
-    <div className="player-overlay scale-in">
-      {/* HEADER */}
-      <div style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "flex-end",
-        marginBottom: "20px"
-      }}>
-        <div>
-          <div style={{ fontSize: "18px", opacity: 0.6, marginBottom: "4px", textTransform: "uppercase" }}>
-            {streamType === "live" ? "Live TV" : "VOD"}
-          </div>
-          <div style={{ fontSize: "42px", fontWeight: "bold", textShadow: "0 2px 10px rgba(0,0,0,0.5)" }}>
-            {channelName}
-          </div>
+    <div className="player-ui scale-in">
+      <div className="player-controls-bottom">
+        
+        {/* INFO */}
+        <div style={{ marginBottom: "10px" }}>
+           <div style={{ fontSize: "40px", fontWeight: "900", marginBottom: "5px" }}>{channelName}</div>
+           <div style={{ fontSize: "20px", color: "var(--text-dim)", fontWeight: "600" }}>
+              {streamType === "live" ? "LIVE TV" : "NOW PLAYING"} • 4K HDR • 5.1
+           </div>
         </div>
-        <div style={{ textAlign: "right", fontSize: "20px", opacity: 0.8 }}>
-          {streamType === "live" ? "Press GREEN for Mini Guide" : ""}
-        </div>
-      </div>
 
-      {/* PROGRESS */}
-      {streamType !== "live" && (
-        <div style={{ marginBottom: "30px" }}>
-          <div className="progress-bar">
-            <div className="progress-fill" style={{ width: `${progress}%`, position: "relative" }}>
-               <div style={{
-                 position: "absolute",
-                 right: "-8px",
-                 top: "-5px",
-                 width: "20px",
-                 height: "20px",
-                 borderRadius: "50%",
-                 background: "white",
-                 boxShadow: "0 0 10px rgba(0,170,255,0.8)"
-               }} />
-            </div>
-          </div>
-          <div style={{
-            display: "flex",
-            justifyContent: "space-between",
-            marginTop: "12px",
-            fontSize: "18px",
-            fontWeight: "500",
-            fontVariantNumeric: "tabular-nums"
-          }}>
-            <span>{currentTime}</span>
-            <span>{duration}</span>
-          </div>
+        {/* PROGRESS */}
+        <div className="player-progress-container">
+           <div className="player-progress-bar">
+              <div className="player-progress-fill" style={{ width: `${progress}%` }}>
+                 <div className="player-progress-handle" />
+              </div>
+           </div>
+           <div style={{ display: "flex", justifyContent: "space-between", marginTop: "15px" }}>
+              <span className="player-time">{currentTime}</span>
+              <span className="player-time">{duration}</span>
+           </div>
         </div>
-      )}
 
-      {/* BUTTONS */}
-      <div style={{
-        display: "flex",
-        gap: "12px",
-        justifyContent: "center",
-        alignItems: "center"
-      }}>
-        {controls.map((ctrl, index) => {
-          // Hide seek/next/prev for live if desired, but often RW/FF works for timeshift
-          return (
-            <div
-              key={ctrl.id}
-              className={`player-button ${focused === index ? "active" : ""}`}
-              style={{
-                width: "70px",
-                height: "70px",
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                fontSize: "30px",
-                borderRadius: "50%", // Circular buttons for premium look
-                padding: 0
-              }}
-            >
-              {ctrl.label}
-            </div>
-          );
-        })}
+        {/* BUTTONS */}
+        <div className="player-btns-row">
+           <div className="player-btns-left">
+              {controls.slice(0, 5).map((ctrl, index) => (
+                <button
+                  key={ctrl.id}
+                  className={`player-btn ${focused === index ? "focused" : ""}`}
+                >
+                  {ctrl.label}
+                </button>
+              ))}
+           </div>
+
+           <div className="player-btns-right">
+              {controls.slice(5).map((ctrl, index) => {
+                const globalIndex = index + 5;
+                return (
+                  <button
+                    key={ctrl.id}
+                    className={`player-btn ${focused === globalIndex ? "focused" : ""}`}
+                  >
+                    {ctrl.label}
+                  </button>
+                );
+              })}
+           </div>
+        </div>
+
       </div>
     </div>
   );

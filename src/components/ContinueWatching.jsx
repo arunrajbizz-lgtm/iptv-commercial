@@ -1,188 +1,98 @@
 import { navigateTo } from "../utils/navigation";
-import {
-  useEffect,
-  useState
-} from "react";
+import { useEffect, useState, useRef } from "react";
+import { KEYS } from "../utils/tizenRemote";
+import focusManager from "../core/FocusManager";
 
-export default function ContinueWatching() {
+export default function ContinueWatching({ isFocused }) {
+  const [items, setItems] = useState([]);
+  const [focusedIndex, setFocusedIndex] = useState(0);
+  const scrollRef = useRef(null);
 
-  const [items,
-    setItems] =
-    useState([]);
-
-  // INIT
   useEffect(() => {
-
     loadItems();
-
   }, []);
 
-  // LOAD
+  useEffect(() => {
+    if (!isFocused) return;
+
+    function handleKeys(event) {
+      switch (event.keyCode) {
+        case KEYS.LEFT:
+          if (focusedIndex > 0) {
+            setFocusedIndex(prev => prev - 1);
+          } else {
+            focusManager.setZone("sidebar");
+          }
+          break;
+
+        case KEYS.RIGHT:
+          if (focusedIndex < items.length - 1) {
+            setFocusedIndex(prev => prev + 1);
+          }
+          break;
+
+        case KEYS.ENTER:
+          openItem(items[focusedIndex]);
+          break;
+
+        default:
+          break;
+      }
+    }
+
+    document.addEventListener("keydown", handleKeys);
+    return () => document.removeEventListener("keydown", handleKeys);
+  }, [isFocused, focusedIndex, items]);
+
+  useEffect(() => {
+    if (isFocused && scrollRef.current) {
+      const card = scrollRef.current.children[focusedIndex];
+      if (card) {
+        card.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+      }
+    }
+  }, [focusedIndex, isFocused]);
+
   function loadItems() {
-
     try {
-
-      const data =
-        JSON.parse(
-
-          localStorage.getItem(
-            "continue_watching"
-          )
-        ) || [];
-
+      const data = JSON.parse(localStorage.getItem("continue_watching")) || [];
       setItems(data);
-
     } catch (error) {
-
       console.log(error);
     }
   }
 
-  // OPEN
   function openItem(item) {
-
     if (!item) return;
 
-    localStorage.setItem(
-      "stream_id",
-      item.stream_id
-    );
-
-    localStorage.setItem(
-      "stream_name",
-      item.name
-    );
-
-    localStorage.setItem(
-      "stream_type",
-      item.type
-    );
-
+    localStorage.setItem("stream_id", item.stream_id);
+    localStorage.setItem("stream_name", item.name);
+    localStorage.setItem("stream_type", item.type);
+    localStorage.setItem("stream_icon", item.stream_icon || item.cover);
     navigateTo("/player");
   }
 
-  // EMPTY
-  if (!items.length) {
-
-    return null;
-  }
+  if (!items.length) return null;
 
   return (
-
-    <div style={{
-      marginBottom: "60px"
-    }}>
-
-      {/* TITLE */}
-
-      <div style={{
-        fontSize: "42px",
-        fontWeight: "bold",
-        marginBottom: "26px"
-      }}>
-
-        CONTINUE WATCHING
-
-      </div>
-
-      {/* ROW */}
-
-      <div style={{
-        display: "flex",
-        gap: "24px",
-        overflowX: "auto"
-      }}>
-
-        {
-          items.map(
-            (item, index) => (
-
-            <div
-              key={index}
-              onClick={() => {
-
-                openItem(item);
-              }}
-              style={{
-
-                minWidth:
-                  "260px",
-
-                background:
-                  "#1d1d1d",
-
-                borderRadius:
-                  "18px",
-
-                overflow:
-                  "hidden",
-
-                cursor:
-                  "pointer",
-
-                border:
-                  "2px solid rgba(255,255,255,0.08)"
-              }}
-            >
-
-              {/* IMAGE */}
-
-              <img
-                src={
-                  item.stream_icon
-                  ||
-                  item.cover
-                }
-                alt=""
-                style={{
-                  width: "100%",
-                  height: "340px",
-                  objectFit:
-                    "cover",
-                  background:
-                    "#000"
-                }}
-              />
-
-              {/* INFO */}
-
-              <div style={{
-                padding: "18px"
-              }}>
-
-                {/* NAME */}
-
-                <div style={{
-                  fontSize: "24px",
-                  fontWeight: "bold",
-                  marginBottom:
-                    "12px"
-                }}>
-
-                  {item.name}
-
-                </div>
-
-                {/* TIME */}
-
-                <div style={{
-                  fontSize: "18px",
-                  opacity: 0.75
-                }}>
-
-                  Resume Playback
-
-                </div>
-
-              </div>
-
-            </div>
-
-          ))
-        }
-
-      </div>
-
+    <div className="row-scroll" ref={scrollRef}>
+      {items.map((item, index) => (
+        <div
+          key={`${item.stream_id}-${index}`}
+          className={`content-card ${isFocused && focusedIndex === index ? "focused" : ""}`}
+          onClick={() => openItem(item)}
+        >
+          <img
+            src={item.stream_icon || item.cover || "assets/hero.png"}
+            alt=""
+            className="card-img"
+          />
+          <div className="card-info">
+             <div style={{ fontWeight: "700", fontSize: "18px" }}>{item.name}</div>
+             <div style={{ fontSize: "14px", opacity: 0.6 }}>RESUME</div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

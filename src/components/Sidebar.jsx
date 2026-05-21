@@ -10,157 +10,110 @@ import {
 import focusManager
 from "../core/FocusManager";
 
+import { navigateTo } from "../utils/navigation";
+
 export default function Sidebar({
   active,
   onSelect
 }) {
 
   const items = [
-
-    "LIVE TV",
-
-    "MOVIES",
-
-    "FAVORITES",
-
-    "SERIES",
-
-    "SETTINGS"
+    { id: "HOME", label: "Home", icon: "🏠", path: "/dashboard" },
+    { id: "LIVE", label: "Live TV", icon: "📺", path: "/live" },
+    { id: "MOVIES", label: "Movies", icon: "🎬", path: "/movies" },
+    { id: "SERIES", label: "Series", icon: "🎞️", path: "/series" },
+    { id: "SEARCH", label: "Search", icon: "🔍", path: "/search" },
+    { id: "FAVORITES", label: "My List", icon: "❤️", path: "/favorites" },
+    { id: "SETTINGS", label: "Settings", icon: "⚙️", path: "/settings" }
   ];
 
   const [focused,
     setFocused] =
     useState(0);
 
+  const [expanded, setExpanded] = useState(false);
+
   // RESTORE
   useEffect(() => {
-
-    const saved =
-      focusManager.getSidebar();
-
+    const saved = focusManager.getSidebar();
     setFocused(saved);
-
   }, []);
 
   // REMOTE
   useEffect(() => {
 
     function handleKeys(event) {
-
-      // ONLY SIDEBAR ACTIVE
-      if (
-        focusManager.getZone()
-        !== "sidebar"
-      ) return;
+      if (focusManager.getZone() !== "sidebar") return;
 
       switch (event.keyCode) {
-
-        // UP
         case KEYS.UP:
-
           if (focused > 0) {
-
-            const newIndex =
-              focused - 1;
-
-            setFocused(
-              newIndex
-            );
-
-            focusManager.setSidebar(
-              newIndex
-            );
-
-            onSelect(
-              newIndex
-            );
+            const next = focused - 1;
+            setFocused(next);
+            focusManager.setSidebar(next);
           }
-
           break;
 
-        // DOWN
         case KEYS.DOWN:
-
-          if (
-            focused <
-            items.length - 1
-          ) {
-
-            const newIndex =
-              focused + 1;
-
-            setFocused(
-              newIndex
-            );
-
-            focusManager.setSidebar(
-              newIndex
-            );
-
-            onSelect(
-              newIndex
-            );
+          if (focused < items.length - 1) {
+            const next = focused + 1;
+            setFocused(next);
+            focusManager.setSidebar(next);
           }
-
           break;
 
-        // RIGHT
         case KEYS.RIGHT:
+          setExpanded(false);
+          focusManager.setZone("content");
+          break;
 
-          // SIDEBAR → CATEGORY
-          focusManager.setZone(
-            "categories"
-          );
+        case KEYS.ENTER:
+          const item = items[focused];
+          navigateTo(item.path);
+          break;
 
+        case KEYS.BACK:
+          setExpanded(false);
+          focusManager.setZone("content");
           break;
 
         default:
-
           break;
       }
     }
 
-    document.addEventListener(
-      "keydown",
-      handleKeys
-    );
+    document.addEventListener("keydown", handleKeys);
+    return () => document.removeEventListener("keydown", handleKeys);
+  }, [focused]);
 
-    return () => {
-
-      document.removeEventListener(
-        "keydown",
-        handleKeys
-      );
-    };
-
-  }, [
-    focused,
-    onSelect
-  ]);
+  // AUTO EXPAND ON ZONE CHANGE
+  useEffect(() => {
+    const zone = focusManager.getZone();
+    setExpanded(zone === "sidebar");
+  }, [focusManager.getZone()]);
 
   return (
-    <div className="sidebar glass-panel">
+    <aside className={`app-sidebar ${expanded ? "expanded" : ""}`}>
       <div className="sidebar-logo">
-        STREAM<span>DECK</span>
+        {expanded ? "STREAMDECK" : "S"}
       </div>
 
-      {
-        items.map(
-          (item, index) => (
-
+      <nav className="sidebar-nav">
+        {items.map((item, index) => (
           <div
-            key={item}
-            className={`sidebar-item ${focused === index && focusManager.getZone() === "sidebar" ? "active" : ""}`}
-            style={{
-               opacity: (focused === index && focusManager.getZone() === "sidebar") || active === item ? 1 : 0.5
+            key={item.id}
+            className={`nav-item ${focused === index && expanded ? "focused" : ""} ${active === item.id ? "active" : ""}`}
+            onMouseEnter={() => {
+              setFocused(index);
+              focusManager.setZone("sidebar");
             }}
+            onClick={() => navigateTo(item.path)}
           >
-            {item}
+            <span className="nav-item-icon">{item.icon}</span>
+            <span className="nav-item-text">{item.label}</span>
           </div>
-
-        ))
-      }
-
-    </div>
+        ))}
+      </nav>
+    </aside>
   );
 }
