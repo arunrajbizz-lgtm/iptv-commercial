@@ -10,12 +10,13 @@ export default function MoviesPage() {
   const [movies, setMovies] = useState([]);
   const [focusedCategory, setFocusedCategory] = useState(0);
   const [focusedMovie, setFocusedMovie] = useState(0);
-  const [zone, setZone] = useState("categories");
+  const [zone, setZone] = useState("content");
+  const [showDrawer, setShowDrawer] = useState(false);
   const gridRef = useRef(null);
-  const COLS = 5;
+  const COLS = 6;
 
   useEffect(() => {
-    focusManager.setZone("categories");
+    focusManager.setZone("content");
     loadCategories();
   }, []);
 
@@ -40,48 +41,45 @@ export default function MoviesPage() {
 
   useEffect(() => {
     function handleKeys(event) {
-      if (focusManager.getZone() === "sidebar") return;
+      const currentZone = focusManager.getZone();
+      if (currentZone === "sidebar") return;
 
       switch (event.keyCode) {
         case KEYS.UP:
-          if (zone === "categories") {
-             if (focusedCategory > 0) {
-                const next = focusedCategory - 1;
-                setFocusedCategory(next);
-                loadMovies(categories[next]?.category_id);
-             }
+          if (zone === "drawer") {
+             if (focusedCategory > 0) setFocusedCategory(prev => prev - 1);
           } else {
              if (focusedMovie >= COLS) setFocusedMovie(prev => prev - COLS);
           }
           break;
 
         case KEYS.DOWN:
-          if (zone === "categories") {
-             if (focusedCategory < categories.length - 1) {
-                const next = focusedCategory + 1;
-                setFocusedCategory(next);
-                loadMovies(categories[next]?.category_id);
-             }
+          if (zone === "drawer") {
+             if (focusedCategory < categories.length - 1) setFocusedCategory(prev => prev + 1);
           } else {
              if (focusedMovie + COLS < movies.length) setFocusedMovie(prev => prev + COLS);
           }
           break;
 
         case KEYS.LEFT:
-          if (zone === "movies" && focusedMovie % COLS === 0) {
-             setZone("categories");
-             focusManager.setZone("categories");
-          } else if (zone === "categories") {
+          if (zone === "content") {
+             if (focusedMovie % COLS === 0) {
+                setShowDrawer(true);
+                setZone("drawer");
+             } else {
+                setFocusedMovie(prev => prev - 1);
+             }
+          } else if (zone === "drawer") {
+             setShowDrawer(false);
              focusManager.setZone("sidebar");
-          } else if (zone === "movies") {
-             setFocusedMovie(prev => prev - 1);
           }
           break;
 
         case KEYS.RIGHT:
-          if (zone === "categories") {
-             setZone("movies");
-             focusManager.setZone("content");
+          if (zone === "drawer") {
+             setShowDrawer(false);
+             setZone("content");
+             loadMovies(categories[focusedCategory]?.category_id);
           } else {
              if (focusedMovie % COLS < COLS - 1 && focusedMovie < movies.length - 1) {
                 setFocusedMovie(prev => prev + 1);
@@ -90,11 +88,22 @@ export default function MoviesPage() {
           break;
 
         case KEYS.ENTER:
-          if (zone === "movies") openMovie(movies[focusedMovie]);
+          if (zone === "drawer") {
+             setShowDrawer(false);
+             setZone("content");
+             loadMovies(categories[focusedCategory]?.category_id);
+          } else {
+             openMovie(movies[focusedMovie]);
+          }
           break;
 
         case KEYS.BACK:
-          navigateTo("/dashboard");
+          if (showDrawer) {
+             setShowDrawer(false);
+             setZone("content");
+          } else {
+             navigateTo("/dashboard");
+          }
           break;
 
         default:
@@ -104,10 +113,10 @@ export default function MoviesPage() {
 
     document.addEventListener("keydown", handleKeys);
     return () => document.removeEventListener("keydown", handleKeys);
-  }, [zone, focusedCategory, focusedMovie, categories, movies]);
+  }, [zone, focusedCategory, focusedMovie, categories, movies, showDrawer]);
 
   useEffect(() => {
-     if (zone === "movies" && gridRef.current) {
+     if (zone === "content" && gridRef.current) {
         const item = gridRef.current.children[focusedMovie];
         if (item) item.scrollIntoView({ behavior: "smooth", block: "center" });
      }
@@ -125,41 +134,39 @@ export default function MoviesPage() {
   return (
     <div className="app-container">
       <Sidebar active="MOVIES" />
-      <main className="app-main" style={{ display: "flex" }}>
-         <aside className="app-sidebar expanded" style={{ width: "400px", borderRight: "1px solid #222" }}>
-            <div className="sidebar-logo" style={{ paddingLeft: "20px" }}>MOVIES</div>
-            <div className="sidebar-nav" style={{ overflowY: "auto", flex: 1 }}>
-               {categories.map((cat, index) => (
-                 <div 
-                   key={cat.category_id}
-                   className={`nav-item ${focusedCategory === index && zone === "categories" ? "focused" : ""}`}
-                   style={{ paddingLeft: "40px" }}
-                 >
-                    {cat.category_name}
-                 </div>
-               ))}
-            </div>
-         </aside>
+      
+      <div className={`category-drawer ${showDrawer ? "visible" : ""}`}>
+         <h2 className="drawer-title">Movie Categories</h2>
+         <div className="drawer-list">
+            {categories.map((cat, index) => (
+              <div 
+                key={cat.category_id}
+                className={`drawer-item ${focusedCategory === index && zone === "drawer" ? "focused" : ""} ${categories[focusedCategory]?.category_id === cat.category_id ? "active" : ""}`}
+              >
+                 {cat.category_name}
+              </div>
+            ))}
+         </div>
+      </div>
 
-         <section style={{ flex: 1, padding: "60px", overflowY: "auto" }}>
-            <h1 className="hero-title" style={{ fontSize: "60px", marginBottom: "40px" }}>
-               {categories[focusedCategory]?.category_name || "All Movies"}
-            </h1>
-            <div className="content-grid" ref={gridRef} style={{ gridTemplateColumns: `repeat(${COLS}, 1fr)`, gap: "30px" }}>
-               {movies.map((movie, index) => (
-                 <div 
-                   key={`${movie.stream_id}-${index}`}
-                   className={`content-card ${focusedMovie === index && zone === "movies" ? "focused" : ""}`}
-                   style={{ height: "450px" }}
-                 >
-                    <img src={movie.stream_icon} alt="" className="card-img" />
-                    <div className="card-info">
-                       <div style={{ fontWeight: "700", fontSize: "22px" }}>{movie.name}</div>
-                    </div>
+      <main className="app-main browse-container">
+         <h1 className="hero-title" style={{ fontSize: "60px", marginBottom: "50px" }}>
+            {categories[focusedCategory]?.category_name || "Movies"}
+         </h1>
+
+         <div className="content-grid" ref={gridRef}>
+            {movies.map((movie, index) => (
+              <div 
+                key={`${movie.stream_id}-${index}`}
+                className={`content-card portrait-card ${focusedMovie === index && zone === "content" ? "focused" : ""}`}
+              >
+                 <img src={movie.stream_icon} alt="" className="card-img" />
+                 <div className="card-info">
+                    <div style={{ fontWeight: "700", fontSize: "22px" }}>{movie.name}</div>
                  </div>
-               ))}
-            </div>
-         </section>
+              </div>
+            ))}
+         </div>
       </main>
     </div>
   );

@@ -25,7 +25,6 @@ export default function Dashboard() {
 
       switch (event.keyCode) {
         case KEYS.LEFT:
-          // In hero or start of row, go to sidebar
           focusManager.setZone("sidebar");
           break;
 
@@ -43,7 +42,7 @@ export default function Dashboard() {
 
         case KEYS.RIGHT:
           if (contentRowIndex === -1) {
-             setHeroBtnIndex(prev => (prev === 0 ? 1 : 1));
+             setHeroBtnIndex(1);
           }
           break;
 
@@ -57,6 +56,10 @@ export default function Dashboard() {
         case KEYS.BLUE:
           setShowVoice(true);
           focusManager.setZone("modal");
+          break;
+
+        case KEYS.BACK:
+          // In a real TV app, back on home might show an exit dialog
           break;
 
         default:
@@ -80,28 +83,32 @@ export default function Dashboard() {
       <main className="app-main">
         {/* HERO SECTION */}
         <section className="hero-banner">
-          <img src="assets/hero.png" alt="Hero" className="hero-image" />
+          <img src="src/assets/hero.png" alt="Hero" className="hero-image" />
           <div className="hero-overlay" />
           
-          <div className="hero-content scale-in">
-            <p className="sidebar-logo" style={{ fontSize: "24px", marginBottom: "10px" }}>STREAMDECK ORIGINAL</p>
-            <h1 className="hero-title">Discover Your Next Favorite</h1>
+          <div className="hero-content fade-in">
+            <p className="hero-tag">Streamdeck Original</p>
+            <h1 className="hero-title">Discover Your<br/>Next Favorite</h1>
+            
             <div className="hero-meta">
-              <span className="rating">98% Match</span>
+              <span className="match">98% Match</span>
               <span>2026</span>
-              <span style={{ border: "1px solid #aaa", padding: "0 10px" }}>4K ULTRA HD</span>
+              <span className="badge">18+</span>
+              <span className="badge">4K ULTRA HD</span>
             </div>
+            
             <p className="hero-desc">
               Experience entertainment like never before. Access thousands of live channels, 
               global movies, and exclusive series in stunning quality. Designed for the 
-              ultimate TV experience.
+              ultimate TV experience with lightning fast navigation.
             </p>
+            
             <div className="hero-btns">
               <button 
                 className={`btn-primary ${contentRowIndex === -1 && heroBtnIndex === 0 ? "focused" : ""}`}
                 onClick={() => navigateTo("/live")}
               >
-                <span>▶</span> Watch Live
+                <span>▶</span> Play
               </button>
               <button 
                 className={`btn-secondary ${contentRowIndex === -1 && heroBtnIndex === 1 ? "focused" : ""}`}
@@ -126,7 +133,7 @@ export default function Dashboard() {
           </div>
 
           <div className={`row-container ${contentRowIndex === 2 ? "focused" : ""}`}>
-            <h2 className="row-title">Recently Played</h2>
+            <h2 className="row-title">Recently Played Channels</h2>
             <RecentChannels isFocused={contentRowIndex === 2} />
           </div>
         </div>

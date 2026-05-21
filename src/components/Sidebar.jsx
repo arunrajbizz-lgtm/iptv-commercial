@@ -1,22 +1,9 @@
-import {
-  useEffect,
-  useState
-} from "react";
-
-import {
-  KEYS
-} from "../utils/tizenRemote";
-
-import focusManager
-from "../core/FocusManager";
-
+import { useEffect, useState } from "react";
+import { KEYS } from "../utils/tizenRemote";
+import focusManager from "../core/FocusManager";
 import { navigateTo } from "../utils/navigation";
 
-export default function Sidebar({
-  active,
-  onSelect
-}) {
-
+export default function Sidebar({ active }) {
   const items = [
     { id: "HOME", label: "Home", icon: "🏠", path: "/dashboard" },
     { id: "LIVE", label: "Live TV", icon: "📺", path: "/live" },
@@ -27,21 +14,15 @@ export default function Sidebar({
     { id: "SETTINGS", label: "Settings", icon: "⚙️", path: "/settings" }
   ];
 
-  const [focused,
-    setFocused] =
-    useState(0);
-
+  const [focused, setFocused] = useState(0);
   const [expanded, setExpanded] = useState(false);
 
-  // RESTORE
   useEffect(() => {
     const saved = focusManager.getSidebar();
     setFocused(saved);
   }, []);
 
-  // REMOTE
   useEffect(() => {
-
     function handleKeys(event) {
       if (focusManager.getZone() !== "sidebar") return;
 
@@ -86,11 +67,14 @@ export default function Sidebar({
     return () => document.removeEventListener("keydown", handleKeys);
   }, [focused]);
 
-  // AUTO EXPAND ON ZONE CHANGE
+  // EXPAND ON ZONE
   useEffect(() => {
-    const zone = focusManager.getZone();
-    setExpanded(zone === "sidebar");
-  }, [focusManager.getZone()]);
+    const interval = setInterval(() => {
+       const zone = focusManager.getZone();
+       setExpanded(zone === "sidebar");
+    }, 100);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <aside className={`app-sidebar ${expanded ? "expanded" : ""}`}>
@@ -103,10 +87,6 @@ export default function Sidebar({
           <div
             key={item.id}
             className={`nav-item ${focused === index && expanded ? "focused" : ""} ${active === item.id ? "active" : ""}`}
-            onMouseEnter={() => {
-              setFocused(index);
-              focusManager.setZone("sidebar");
-            }}
             onClick={() => navigateTo(item.path)}
           >
             <span className="nav-item-icon">{item.icon}</span>

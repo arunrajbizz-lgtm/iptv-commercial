@@ -932,12 +932,9 @@ export default function PlayerPage() {
     <div style={{
       width: "100%",
       height: "100vh",
-      background:
-        "transparent",
-      position:
-        "relative",
-      overflow:
-        "hidden"
+      background: "#000",
+      position: "relative",
+      overflow: "hidden"
     }}>
 
       {/* PLAYER */}
@@ -964,6 +961,14 @@ export default function PlayerPage() {
           onPlay={() => setPaused(false)}
           controls={false}
         />
+      )}
+
+      {/* PLAYER HEADER */}
+      {showControls && (
+        <header className="player-header fade-in">
+           <div className="player-title">{streamName}</div>
+           {streamType === "live" && <div className="badge" style={{ background: "var(--primary)", border: "none" }}>LIVE</div>}
+        </header>
       )}
 
       {/* LOADING */}

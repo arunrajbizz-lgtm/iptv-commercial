@@ -10,12 +10,13 @@ export default function SeriesPage() {
   const [series, setSeries] = useState([]);
   const [focusedCategory, setFocusedCategory] = useState(0);
   const [focusedSeries, setFocusedSeries] = useState(0);
-  const [zone, setZone] = useState("categories");
+  const [zone, setZone] = useState("content");
+  const [showDrawer, setShowDrawer] = useState(false);
   const gridRef = useRef(null);
-  const COLS = 5;
+  const COLS = 6;
 
   useEffect(() => {
-    focusManager.setZone("categories");
+    focusManager.setZone("content");
     loadCategories();
   }, []);
 
@@ -40,48 +41,45 @@ export default function SeriesPage() {
 
   useEffect(() => {
     function handleKeys(event) {
-      if (focusManager.getZone() === "sidebar") return;
+      const currentZone = focusManager.getZone();
+      if (currentZone === "sidebar") return;
 
       switch (event.keyCode) {
         case KEYS.UP:
-          if (zone === "categories") {
-             if (focusedCategory > 0) {
-                const next = focusedCategory - 1;
-                setFocusedCategory(next);
-                loadSeries(categories[next]?.category_id);
-             }
+          if (zone === "drawer") {
+             if (focusedCategory > 0) setFocusedCategory(prev => prev - 1);
           } else {
              if (focusedSeries >= COLS) setFocusedSeries(prev => prev - COLS);
           }
           break;
 
         case KEYS.DOWN:
-          if (zone === "categories") {
-             if (focusedCategory < categories.length - 1) {
-                const next = focusedCategory + 1;
-                setFocusedCategory(next);
-                loadSeries(categories[next]?.category_id);
-             }
+          if (zone === "drawer") {
+             if (focusedCategory < categories.length - 1) setFocusedCategory(prev => prev + 1);
           } else {
              if (focusedSeries + COLS < series.length) setFocusedSeries(prev => prev + COLS);
           }
           break;
 
         case KEYS.LEFT:
-          if (zone === "series" && focusedSeries % COLS === 0) {
-             setZone("categories");
-             focusManager.setZone("categories");
-          } else if (zone === "categories") {
+          if (zone === "content") {
+             if (focusedSeries % COLS === 0) {
+                setShowDrawer(true);
+                setZone("drawer");
+             } else {
+                setFocusedSeries(prev => prev - 1);
+             }
+          } else if (zone === "drawer") {
+             setShowDrawer(false);
              focusManager.setZone("sidebar");
-          } else if (zone === "series") {
-             setFocusedSeries(prev => prev - 1);
           }
           break;
 
         case KEYS.RIGHT:
-          if (zone === "categories") {
-             setZone("series");
-             focusManager.setZone("content");
+          if (zone === "drawer") {
+             setShowDrawer(false);
+             setZone("content");
+             loadSeries(categories[focusedCategory]?.category_id);
           } else {
              if (focusedSeries % COLS < COLS - 1 && focusedSeries < series.length - 1) {
                 setFocusedSeries(prev => prev + 1);
@@ -90,11 +88,22 @@ export default function SeriesPage() {
           break;
 
         case KEYS.ENTER:
-          if (zone === "series") openSeries(series[focusedSeries]);
+          if (zone === "drawer") {
+             setShowDrawer(false);
+             setZone("content");
+             loadSeries(categories[focusedCategory]?.category_id);
+          } else {
+             openSeries(series[focusedSeries]);
+          }
           break;
 
         case KEYS.BACK:
-          navigateTo("/dashboard");
+          if (showDrawer) {
+             setShowDrawer(false);
+             setZone("content");
+          } else {
+             navigateTo("/dashboard");
+          }
           break;
 
         default:
@@ -104,10 +113,10 @@ export default function SeriesPage() {
 
     document.addEventListener("keydown", handleKeys);
     return () => document.removeEventListener("keydown", handleKeys);
-  }, [zone, focusedCategory, focusedSeries, categories, series]);
+  }, [zone, focusedCategory, focusedSeries, categories, series, showDrawer]);
 
   useEffect(() => {
-     if (zone === "series" && gridRef.current) {
+     if (zone === "content" && gridRef.current) {
         const item = gridRef.current.children[focusedSeries];
         if (item) item.scrollIntoView({ behavior: "smooth", block: "center" });
      }
@@ -122,41 +131,39 @@ export default function SeriesPage() {
   return (
     <div className="app-container">
       <Sidebar active="SERIES" />
-      <main className="app-main" style={{ display: "flex" }}>
-         <aside className="app-sidebar expanded" style={{ width: "400px", borderRight: "1px solid #222" }}>
-            <div className="sidebar-logo" style={{ paddingLeft: "20px" }}>SERIES</div>
-            <div className="sidebar-nav" style={{ overflowY: "auto", flex: 1 }}>
-               {categories.map((cat, index) => (
-                 <div 
-                   key={cat.category_id}
-                   className={`nav-item ${focusedCategory === index && zone === "categories" ? "focused" : ""}`}
-                   style={{ paddingLeft: "40px" }}
-                 >
-                    {cat.category_name}
-                 </div>
-               ))}
-            </div>
-         </aside>
+      
+      <div className={`category-drawer ${showDrawer ? "visible" : ""}`}>
+         <h2 className="drawer-title">Series Categories</h2>
+         <div className="drawer-list">
+            {categories.map((cat, index) => (
+              <div 
+                key={cat.category_id}
+                className={`drawer-item ${focusedCategory === index && zone === "drawer" ? "focused" : ""} ${categories[focusedCategory]?.category_id === cat.category_id ? "active" : ""}`}
+              >
+                 {cat.category_name}
+              </div>
+            ))}
+         </div>
+      </div>
 
-         <section style={{ flex: 1, padding: "60px", overflowY: "auto" }}>
-            <h1 className="hero-title" style={{ fontSize: "60px", marginBottom: "40px" }}>
-               {categories[focusedCategory]?.category_name || "All Series"}
-            </h1>
-            <div className="content-grid" ref={gridRef} style={{ gridTemplateColumns: `repeat(${COLS}, 1fr)`, gap: "30px" }}>
-               {series.map((item, index) => (
-                 <div 
-                   key={`${item.series_id}-${index}`}
-                   className={`content-card ${focusedSeries === index && zone === "series" ? "focused" : ""}`}
-                   style={{ height: "450px" }}
-                 >
-                    <img src={item.cover} alt="" className="card-img" />
-                    <div className="card-info">
-                       <div style={{ fontWeight: "700", fontSize: "22px" }}>{item.name}</div>
-                    </div>
+      <main className="app-main browse-container">
+         <h1 className="hero-title" style={{ fontSize: "60px", marginBottom: "50px" }}>
+            {categories[focusedCategory]?.category_name || "Series"}
+         </h1>
+
+         <div className="content-grid" ref={gridRef}>
+            {series.map((item, index) => (
+              <div 
+                key={`${item.series_id}-${index}`}
+                className={`content-card portrait-card ${focusedSeries === index && zone === "content" ? "focused" : ""}`}
+              >
+                 <img src={item.cover} alt="" className="card-img" />
+                 <div className="card-info">
+                    <div style={{ fontWeight: "700", fontSize: "22px" }}>{item.name}</div>
                  </div>
-               ))}
-            </div>
-         </section>
+              </div>
+            ))}
+         </div>
       </main>
     </div>
   );

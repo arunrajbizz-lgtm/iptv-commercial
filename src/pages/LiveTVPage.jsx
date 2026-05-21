@@ -5,23 +5,20 @@ import { getLiveCategories, getLiveStreams } from "../services/xtreamApi";
 import Sidebar from "../components/Sidebar";
 import focusManager from "../core/FocusManager";
 import navigationManager from "../core/NavigationManager";
-import { getFavorites, toggleFavorite } from "../utils/favorites";
 
 export default function LiveTVPage() {
   const [categories, setCategories] = useState([]);
   const [channels, setChannels] = useState([]);
-  const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
   const [focusedCategory, setFocusedCategory] = useState(0);
   const [focusedChannel, setFocusedChannel] = useState(0);
-  const [zone, setZone] = useState("categories");
+  const [zone, setZone] = useState("content");
+  const [showDrawer, setShowDrawer] = useState(false);
 
   const channelListRef = useRef(null);
 
   useEffect(() => {
-    focusManager.setZone("categories");
+    focusManager.setZone("content");
     loadData();
   }, []);
 
@@ -29,7 +26,7 @@ export default function LiveTVPage() {
     try {
       setLoading(true);
       const iptv = JSON.parse(localStorage.getItem("iptv"));
-      if (!iptv) throw new Error("No login info found");
+      if (!iptv) return;
 
       const cats = await getLiveCategories(iptv.host, iptv.username, iptv.password);
       setCategories(cats || []);
@@ -40,38 +37,24 @@ export default function LiveTVPage() {
       
       setLoading(false);
     } catch (err) {
-      setError(err.message);
       setLoading(false);
     }
   }
 
   const filteredChannels = useMemo(() => {
     const cat = categories[focusedCategory];
-    let list = channels;
-    if (cat && cat.category_id !== "all") {
-       list = channels.filter(c => String(c.category_id) === String(cat.category_id));
-    }
-    if (query) {
-      list = list.filter(c => c.name.toLowerCase().includes(query.toLowerCase()));
-    }
-    return list;
-  }, [channels, categories, focusedCategory, query]);
+    if (!cat || cat.category_id === "all") return channels;
+    return channels.filter(c => String(c.category_id) === String(cat.category_id));
+  }, [channels, categories, focusedCategory]);
 
   useEffect(() => {
     function handleKeys(event) {
-      const z = focusManager.getZone();
-
-      if (z === "sidebar") {
-         if (event.keyCode === KEYS.RIGHT) {
-            focusManager.setZone("categories");
-            setZone("categories");
-         }
-         return;
-      }
+      const currentZone = focusManager.getZone();
+      if (currentZone === "sidebar") return;
 
       switch (event.keyCode) {
         case KEYS.UP:
-          if (zone === "categories") {
+          if (zone === "drawer") {
             if (focusedCategory > 0) setFocusedCategory(prev => prev - 1);
           } else {
             if (focusedChannel > 0) setFocusedChannel(prev => prev - 1);
@@ -79,7 +62,7 @@ export default function LiveTVPage() {
           break;
 
         case KEYS.DOWN:
-          if (zone === "categories") {
+          if (zone === "drawer") {
             if (focusedCategory < categories.length - 1) setFocusedCategory(prev => prev + 1);
           } else {
             if (focusedChannel < filteredChannels.length - 1) setFocusedChannel(prev => prev + 1);
@@ -87,29 +70,39 @@ export default function LiveTVPage() {
           break;
 
         case KEYS.LEFT:
-          if (zone === "channels") {
-            setZone("categories");
-            focusManager.setZone("categories");
+          if (zone === "content") {
+            setShowDrawer(true);
+            setZone("drawer");
           } else {
+            setShowDrawer(false);
             focusManager.setZone("sidebar");
           }
           break;
 
         case KEYS.RIGHT:
-          if (zone === "categories") {
-            setZone("channels");
-            focusManager.setZone("content");
+          if (zone === "drawer") {
+            setShowDrawer(false);
+            setZone("content");
           }
           break;
 
         case KEYS.ENTER:
-          if (zone === "channels") {
+          if (zone === "drawer") {
+             setShowDrawer(false);
+             setZone("content");
+             setFocusedChannel(0);
+          } else {
              openChannel(filteredChannels[focusedChannel]);
           }
           break;
         
         case KEYS.BACK:
-          navigateTo("/dashboard");
+          if (showDrawer) {
+            setShowDrawer(false);
+            setZone("content");
+          } else {
+            navigateTo("/dashboard");
+          }
           break;
 
         default:
@@ -119,10 +112,10 @@ export default function LiveTVPage() {
 
     document.addEventListener("keydown", handleKeys);
     return () => document.removeEventListener("keydown", handleKeys);
-  }, [zone, focusedCategory, focusedChannel, categories, filteredChannels]);
+  }, [zone, focusedCategory, focusedChannel, categories, filteredChannels, showDrawer]);
 
   useEffect(() => {
-     if (zone === "channels" && channelListRef.current) {
+     if (zone === "content" && channelListRef.current) {
         const item = channelListRef.current.children[focusedChannel];
         if (item) item.scrollIntoView({ behavior: "smooth", block: "center" });
      }
@@ -142,50 +135,47 @@ export default function LiveTVPage() {
     <div className="app-container">
       <Sidebar active="LIVE" />
 
-      <main className="app-main" style={{ display: "flex" }}>
-        {/* CATEGORIES */}
-        <aside className="app-sidebar expanded" style={{ width: "400px", borderRight: "1px solid #222" }}>
-           <div className="sidebar-logo" style={{ paddingLeft: "20px" }}>CATEGORIES</div>
-           <div className="sidebar-nav" style={{ overflowY: "auto", flex: 1 }}>
-              {categories.map((cat, index) => (
-                <div 
-                  key={cat.category_id}
-                  className={`nav-item ${focusedCategory === index && focusManager.getZone() === "categories" ? "focused" : ""}`}
-                  style={{ paddingLeft: "40px" }}
-                >
-                   {cat.category_name}
-                </div>
-              ))}
-           </div>
-        </aside>
+      <div className={`category-drawer ${showDrawer ? "visible" : ""}`}>
+         <h2 className="drawer-title">Live Categories</h2>
+         <div className="drawer-list">
+            {categories.map((cat, index) => (
+              <div 
+                key={cat.category_id}
+                className={`drawer-item ${focusedCategory === index && zone === "drawer" ? "focused" : ""} ${categories[focusedCategory]?.category_id === cat.category_id ? "active" : ""}`}
+              >
+                 {cat.category_name}
+              </div>
+            ))}
+         </div>
+      </div>
 
-        {/* CHANNELS GRID */}
-        <section style={{ flex: 1, padding: "60px", overflowY: "auto" }}>
-           <h1 className="hero-title" style={{ fontSize: "60px", marginBottom: "40px" }}>
-              {categories[focusedCategory]?.category_name || "Live TV"}
-           </h1>
+      <main className="app-main browse-container">
+        <h1 className="hero-title" style={{ fontSize: "60px", marginBottom: "50px" }}>
+           {categories[focusedCategory]?.category_name || "Live TV"}
+        </h1>
 
-           {loading ? <div className="netflix-loader" /> : (
-             <div className="channel-list-v" ref={channelListRef} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                {filteredChannels.map((channel, index) => (
-                  <div 
-                    key={`${channel.stream_id}-${index}`}
-                    className={`nav-item ${focusedChannel === index && zone === "channels" ? "focused" : ""}`}
-                    style={{ 
-                      height: "100px", 
-                      background: focusedChannel === index && zone === "channels" ? "var(--primary)" : "rgba(255,255,255,0.05)",
-                      display: "flex",
-                      alignItems: "center",
-                      padding: "0 30px"
-                    }}
-                  >
-                     <img src={channel.stream_icon} alt="" style={{ width: "80px", height: "60px", objectFit: "contain", marginRight: "30px", background: "#000", borderRadius: "8px" }} />
-                     <div style={{ fontSize: "28px", fontWeight: "700" }}>{channel.name}</div>
-                  </div>
-                ))}
-             </div>
-           )}
-        </section>
+        {loading ? <div className="netflix-loader" /> : (
+          <div className="channel-list-v" ref={channelListRef} style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
+             {filteredChannels.map((channel, index) => (
+               <div 
+                 key={`${channel.stream_id}-${index}`}
+                 className={`nav-item ${focusedChannel === index && zone === "content" ? "focused" : ""}`}
+                 style={{ 
+                   height: "110px", 
+                   background: focusedChannel === index && zone === "content" ? "var(--primary)" : "rgba(255,255,255,0.05)",
+                   display: "flex",
+                   alignItems: "center",
+                   padding: "0 40px",
+                   borderRadius: "12px",
+                   boxShadow: focusedChannel === index && zone === "content" ? "var(--glow)" : "none"
+                 }}
+               >
+                  <img src={channel.stream_icon} alt="" style={{ width: "100px", height: "70px", objectFit: "contain", marginRight: "40px", background: "#000", borderRadius: "8px" }} />
+                  <div style={{ fontSize: "32px", fontWeight: "700", color: "#fff" }}>{channel.name}</div>
+               </div>
+             ))}
+          </div>
+        )}
       </main>
     </div>
   );
