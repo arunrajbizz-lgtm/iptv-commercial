@@ -391,7 +391,7 @@ export default function PlayerPage() {
         const tsUrl = buildLiveUrl(iptv.host, iptv.username, iptv.password, streamId, "ts");
         await startStreaming(tsUrl);
 
-        // Give 3 sec to re-try next (.m3u8) if .ts fails or is slow
+        // Give 10 sec to re-try next (.m3u8) if .ts fails or is slow
         window.liveFallbackTimeout = setTimeout(async () => {
           const currentId = localStorage.getItem("stream_id");
           if (currentId === streamId) {
@@ -400,7 +400,7 @@ export default function PlayerPage() {
             await startStreaming(fallbackUrl);
             setStreamUrl(fallbackUrl);
           }
-        }, 3500);
+        }, 10000);
       } else if (sType === "live" && browserMode) {
         // Browser: Prefer .m3u8 immediately for HLS.js
         const browserUrl = buildLiveUrl(iptv.host, iptv.username, iptv.password, streamId, "m3u8");
@@ -845,7 +845,7 @@ export default function PlayerPage() {
         console.log("Tizen: Trying .ts first for Live TV Channel Change");
         await startStreaming(url);
 
-        // Give 5 sec to re-try next (.m3u8) if .ts fails or is slow
+        // Give 10 sec to re-try next (.m3u8) if .ts fails or is slow
         window.liveFallbackTimeout = setTimeout(async () => {
           const currentId = localStorage.getItem("stream_id");
           if (currentId === channel.stream_id) {
@@ -859,7 +859,7 @@ export default function PlayerPage() {
             await startStreaming(fallbackUrl);
             setStreamUrl(fallbackUrl);
           }
-        }, 5000);
+        }, 10000);
       } else {
         // Browser: Prefer .m3u8 immediately
         console.log("Browser: Preferring .m3u8 for Live TV Channel Change");
