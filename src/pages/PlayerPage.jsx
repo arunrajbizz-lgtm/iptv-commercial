@@ -61,7 +61,7 @@ export default function PlayerPage() {
     setLoading] =
     useState(true);
 
-  const [isBrowser, setIsBrowser] = useState(false);
+  const [isBrowser] = useState(!window.tizen);
 
   const [paused,
     setPaused] =
@@ -122,11 +122,7 @@ export default function PlayerPage() {
       "player"
     );
 
-    // Detect if we are in a browser or Tizen environment
-    const browserMode = !window.tizen;
-    setIsBrowser(browserMode);
-
-    initializePlayer(browserMode);
+    initializePlayer();
 
     // PROGRESS TIMER
     const timer = setInterval(() => {
@@ -150,7 +146,7 @@ export default function PlayerPage() {
       } catch (e) {}
     }, 1000);
 
-    return () => {
+    const cleanup = () => {
       clearInterval(timer);
       clearTimeout(window.controlsTimeout);
       clearTimeout(window.liveFallbackTimeout);
@@ -159,11 +155,19 @@ export default function PlayerPage() {
           hlsRef.current.destroy();
           hlsRef.current = null;
         }
-
-        avplayManager.stop();
+        if (isBrowser) {
+          const v = document.getElementById("browser-video");
+          if (v) v.src = "";
+        } else {
+          avplayManager.stop();
+        }
       } catch (error) {
         console.log(error);
       }
+    };
+
+    return () => {
+      cleanup();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Run once on mount
@@ -180,6 +184,11 @@ export default function PlayerPage() {
   }
 
   const startStreaming = async (finalUrl) => {
+    // CRITICAL FOR TIZEN: Stop previous instance immediately to free hardware decoder
+    if (window.tizen) {
+      try { await avplayManager.stop(); } catch (e) {}
+    }
+
     // Clean up previous Hls.js instance if it exists
     if (hlsRef.current) {
       hlsRef.current.destroy();
@@ -246,9 +255,6 @@ export default function PlayerPage() {
       }
     } else {
       // Tizen Native
-      try {
-        // Already stopped above
-      } catch (e) {}
       await avplayManager.initialize("avplay-container");
       await avplayManager.play(finalUrl);
     }
@@ -266,9 +272,10 @@ export default function PlayerPage() {
   };
 
   // INIT PLAYER
-  async function initializePlayer(browserMode = isBrowser) {
+  async function initializePlayer() {
     try {
       setLoading(true);
+      const browserMode = !window.tizen;
       const iptv =
         JSON.parse(
 
@@ -461,11 +468,26 @@ export default function PlayerPage() {
       }, 5000);
   }
 
+  const handleClosePlayer = () => {
+    clearTimeout(window.liveFallbackTimeout);
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+      setHlsInstance(null);
+    } else if (isBrowser) {
+      const v = document.getElementById("browser-video");
+      if (v) v.src = "";
+    } else {
+      avplayManager.stop();
+    }
+
+    const backPath = streamType === "live" ? "/live" : streamType === "movie" ? "/movies" : "/series";
+    navigateTo(backPath);
+  };
+
   // REMOTE
   useEffect(() => {
-
     function handleKeys(event) {
-
       autoHide();
 
       // Ensure controls are shown on any key press
@@ -528,27 +550,9 @@ export default function PlayerPage() {
 
         // STOP
         case KEYS.STOP:
-          if (hlsRef.current) {
-            hlsRef.current.destroy();
-            hlsRef.current = null;
-            setHlsInstance(null);
-          } else if (isBrowser) {
-            const v = document.getElementById("browser-video"); if (v) v.src = "";
-          } else {
-            avplayManager.stop();
-          }
-
-          // Explicitly navigate back to the correct list
-          if (streamType === "live") {
-            navigateTo("/live");
-          } else if (streamType === "movie") {
-            navigateTo("/movies");
-          } else {
-            navigateTo("/series");
-          }
-
+          handleClosePlayer();
           break;
-
+          
         // CHANNEL UP
         case KEYS.CH_UP:
 
@@ -611,25 +615,7 @@ export default function PlayerPage() {
 
         // BACK
         case KEYS.BACK:
-          if (hlsRef.current) {
-            hlsRef.current.destroy();
-            hlsRef.current = null;
-            setHlsInstance(null);
-          } else if (isBrowser) {
-            const v = document.getElementById("browser-video"); if (v) v.src = "";
-          } else {
-            avplayManager.stop();
-          }
-
-          // Explicitly navigate back to the correct list
-          if (streamType === "live") {
-            navigateTo("/live");
-          } else if (streamType === "movie") {
-            navigateTo("/movies");
-          } else {
-            navigateTo("/series");
-          }
-
+          handleClosePlayer();
           break;
 
         default:
@@ -846,15 +832,11 @@ export default function PlayerPage() {
           channel.stream_id,
           "ts"
         );
-      
-      const browserMode = !window.tizen;
-      setStreamUrl(url);
-      clearTimeout(window.liveFallbackTimeout);
-      setLoading(true);
 
-      if (!browserMode) {
+      if (!isBrowser) {
         // Tizen: Try .ts first
         console.log("Tizen: Trying .ts first for Live TV Channel Change");
+        clearTimeout(window.liveFallbackTimeout);
         await startStreaming(url);
 
         // Give 10 sec to re-try next (.m3u8) if .ts fails or is slow
@@ -946,9 +928,7 @@ export default function PlayerPage() {
         break;
 
       case "STOP":
-        if (isBrowser) document.getElementById("browser-video").src = "";
-        else avplayManager.stop();
-        navigateTo(streamType === "live" ? "/live" : streamType === "movie" ? "/movies" : "/series");
+        handleClosePlayer();
         break;
 
       case "EPG":

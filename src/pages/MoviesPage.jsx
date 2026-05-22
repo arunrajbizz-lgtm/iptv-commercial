@@ -49,6 +49,7 @@ export default function MoviesPage() {
 
   const loadMovies = useCallback(async (categoryId) => {
     try {
+      setVisibleLimit(PAGE_SIZE);
       const iptv = JSON.parse(localStorage.getItem("iptv"));
       const data = await getMovies(iptv.host, iptv.username, iptv.password, categoryId);
       setMovies(data || []);
