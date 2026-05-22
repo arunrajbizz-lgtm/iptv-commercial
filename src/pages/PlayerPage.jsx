@@ -2,7 +2,8 @@ import { navigateTo } from "../utils/navigation";
 import Hls from 'hls.js';
 import {
   useEffect,
-  useState
+  useState,
+  useRef
 } from "react";
 
 import {
@@ -112,30 +113,34 @@ export default function PlayerPage() {
   const [duration, setDuration] = useState("00:00");
   const [progress, setProgress] = useState(0);
 
+  // Use refs for the timer to access latest state without dependency loops
+  const hlsRef = useRef(null);
+
   // INIT
   useEffect(() => {
-
     focusManager.setZone(
       "player"
     );
 
     // Detect if we are in a browser or Tizen environment
-    setIsBrowser(!window.tizen);
+    const browserMode = !window.tizen;
+    setIsBrowser(browserMode);
 
-    initializePlayer();
+    initializePlayer(browserMode);
 
     // PROGRESS TIMER
     const timer = setInterval(() => {
       try {
-        const video = hlsInstance && hlsInstance.media
-          ? hlsInstance.media
-          : isBrowser ? document.getElementById("browser-video")
+        const hls = hlsRef.current;
+        const video = hls && hls.media
+          ? hls.media
+          : !window.tizen ? document.getElementById("browser-video")
           : avplayManager;
           
         if (!video) return;
 
-        const cur = isBrowser ? video.currentTime : video.getCurrentTime();
-        const dur = isBrowser ? video.duration : video.getDuration();
+        const cur = !window.tizen ? video.currentTime : video.getCurrentTime();
+        const dur = !window.tizen ? video.duration : video.getDuration();
 
         if (dur > 0) {
           setProgress((cur / dur) * 100);
@@ -150,19 +155,18 @@ export default function PlayerPage() {
       clearTimeout(window.controlsTimeout);
       clearTimeout(window.liveFallbackTimeout);
       try {
-        if (hlsInstance) {
-          hlsInstance.destroy();
-          setHlsInstance(null);
+        if (hlsRef.current) {
+          hlsRef.current.destroy();
+          hlsRef.current = null;
         }
 
         avplayManager.stop();
-
       } catch (error) {
-
         console.log(error);
       }
     };
-  }, [hlsInstance, isBrowser]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run once on mount
 
   function formatTime(seconds) {
     if (!seconds || isNaN(seconds)) return "00:00";
@@ -177,8 +181,9 @@ export default function PlayerPage() {
 
   const startStreaming = async (finalUrl) => {
     // Clean up previous Hls.js instance if it exists
-    if (hlsInstance) {
-      hlsInstance.destroy();
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
       setHlsInstance(null);
     }
 
@@ -232,6 +237,7 @@ export default function PlayerPage() {
           console.log("Autoplay prevented, user interaction might be needed", e);
         });
         
+        hlsRef.current = hls;
         setHlsInstance(hls);
       } else {
         console.log("Using native HTML5 video for stream.");
@@ -249,8 +255,9 @@ export default function PlayerPage() {
   };
 
   const getCurrentTime = () => {
-    if (hlsInstance && hlsInstance.media) {
-      return hlsInstance.media.currentTime || 0;
+    const hls = hlsRef.current;
+    if (hls && hls.media) {
+      return hls.media.currentTime || 0;
     }
     if (isBrowser) {
       return document.getElementById("browser-video")?.currentTime || 0;
@@ -259,12 +266,9 @@ export default function PlayerPage() {
   };
 
   // INIT PLAYER
-  async function initializePlayer() {
-
+  async function initializePlayer(browserMode = isBrowser) {
     try {
-
       setLoading(true);
-
       const iptv =
         JSON.parse(
 
@@ -381,17 +385,16 @@ export default function PlayerPage() {
 
       setStreamUrl(url);
 
-      if (sType === "live" && !storedStreamUrl) {
-        // First try .ts
-        console.log("Trying .ts first for Live TV");
+      if (sType === "live" && !storedStreamUrl && !browserMode) {
+        // Tizen: Try .ts first
+        console.log("Tizen: Trying .ts first for Live TV");
         await startStreaming(url);
 
-        // Give 10 sec to re-try next (.m3u8)
+        // Give 5 sec to re-try next (.m3u8) if .ts fails or is slow
         window.liveFallbackTimeout = setTimeout(async () => {
-          // Verify we are still looking at the same stream before falling back
           const currentId = localStorage.getItem("stream_id");
           if (currentId === streamId) {
-            console.log("Live TV Fallback: Switching to .m3u8 after 10s timeout");
+            console.log("Live TV Fallback: Switching to .m3u8");
             const fallbackUrl = buildLiveUrl(iptv.host, iptv.username, iptv.password, streamId, "m3u8");
             if (window.tizen) {
               try { await avplayManager.stop(); } catch (e) {}
@@ -399,8 +402,13 @@ export default function PlayerPage() {
             await startStreaming(fallbackUrl);
             setStreamUrl(fallbackUrl);
           }
-        }, 10000);
-
+        }, 5000);
+      } else if (sType === "live" && !storedStreamUrl && browserMode) {
+        // Browser: Prefer .m3u8 immediately for HLS.js
+        console.log("Browser: Preferring .m3u8 for Live TV");
+        const browserUrl = buildLiveUrl(iptv.host, iptv.username, iptv.password, streamId, "m3u8");
+        await startStreaming(browserUrl);
+        setStreamUrl(browserUrl);
       } else {
         await startStreaming(url);
       }
@@ -416,16 +424,13 @@ export default function PlayerPage() {
         &&
         resume.currentTime > 10
       ) {
-
         setTimeout(() => {
-
-          if (isBrowser) {
+          if (!window.tizen) {
             const video = document.getElementById("browser-video");
             if (video) video.currentTime = resume.currentTime;
           } else {
             avplayManager.seek(resume.currentTime);
           }
-          
         }, 4000);
       }
 
@@ -520,9 +525,9 @@ export default function PlayerPage() {
 
         // STOP
         case KEYS.STOP:
-
-          if (hlsInstance) {
-            hlsInstance.destroy();
+          if (hlsRef.current) {
+            hlsRef.current.destroy();
+            hlsRef.current = null;
             setHlsInstance(null);
           } else if (isBrowser) {
             const v = document.getElementById("browser-video"); if (v) v.src = "";
@@ -590,9 +595,9 @@ export default function PlayerPage() {
 
         // BACK
         case KEYS.BACK:
-
-          if (hlsInstance) {
-            hlsInstance.destroy();
+          if (hlsRef.current) {
+            hlsRef.current.destroy();
+            hlsRef.current = null;
             setHlsInstance(null);
           } else if (isBrowser) {
             const v = document.getElementById("browser-video"); if (v) v.src = "";
@@ -627,18 +632,17 @@ export default function PlayerPage() {
     currentIndex,
     channels,
     favorite,
-    hlsInstance // Add hlsInstance to dependencies
+    isBrowser
   ]);
 
   // HISTORY
   useEffect(() => {
-
     const interval =
       setInterval(() => {
-
         try {
-          const video = hlsInstance && hlsInstance.media
-            ? hlsInstance.media
+          const hls = hlsRef.current;
+          const video = hls && hls.media
+            ? hls.media
             : isBrowser ? document.getElementById("browser-video")
             : avplayManager;
             
@@ -690,12 +694,9 @@ export default function PlayerPage() {
 
             duration
           );
-
         } catch (error) {
-
           console.log(error);
         }
-
       }, 10000);
 
     return () => {

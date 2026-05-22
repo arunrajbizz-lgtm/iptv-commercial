@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { navigateTo } from "../utils/navigation";
 import { KEYS } from "../utils/tizenRemote";
 import focusManager from "../core/FocusManager";
+import navigationManager from "../core/NavigationManager";
 import Sidebar from "../components/Sidebar";
 import RecommendedRow from "../components/RecommendedRow";
 import ContinueWatching from "../components/ContinueWatching";
@@ -49,7 +50,10 @@ export default function Dashboard() {
 
         case KEYS.ENTER:
           if (contentRowIndex === -1) {
-            if (heroBtnIndex === 0) navigateTo("/live");
+            if (heroBtnIndex === 0) {
+              navigationManager.push("/dashboard");
+              navigateTo("/live");
+            }
             else navigateTo("/search");
           }
           break;

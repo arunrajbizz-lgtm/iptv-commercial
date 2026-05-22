@@ -37,6 +37,13 @@ export default function LiveTVPage() {
       setChannels(streams || []);
       localStorage.setItem("live_channels", JSON.stringify(streams || []));
       
+      // Restore last selected category
+      const savedCatId = localStorage.getItem("live_focused_category_id");
+      if (savedCatId && cats) {
+        const catIndex = cats.findIndex(c => String(c.category_id) === String(savedCatId));
+        if (catIndex > -1) setFocusedCategory(catIndex);
+      }
+      
       setLoading(false);
     } catch (err) {
       setLoading(false);
@@ -55,6 +62,17 @@ export default function LiveTVPage() {
     if (!cat || cat.category_id === "all") return channels;
     return channels.filter(c => String(c.category_id) === String(cat.category_id));
   }, [channels, categories, focusedCategory]);
+
+  // Restore channel focus when returning from player or switching categories
+  useEffect(() => {
+    const currentStreamId = localStorage.getItem("stream_id");
+    if (currentStreamId && filteredChannels.length > 0) {
+      const chanIndex = filteredChannels.findIndex(c => String(c.stream_id) === String(currentStreamId));
+      if (chanIndex > -1) {
+        setFocusedChannel(chanIndex);
+      }
+    }
+  }, [filteredChannels]);
 
   useEffect(() => {
     function handleKeys(event) {
@@ -148,6 +166,10 @@ export default function LiveTVPage() {
     localStorage.setItem("stream_name", channel.name);
     localStorage.setItem("stream_type", "live");
     localStorage.setItem("stream_icon", channel.stream_icon);
+    
+    // Persist current category so it can be restored on back
+    localStorage.setItem("live_focused_category_id", categories[focusedCategory]?.category_id);
+    
     navigationManager.push("/live");
     navigateTo("/player");
   }
