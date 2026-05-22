@@ -345,7 +345,7 @@ export default function PlayerPage() {
       }
 
       // LIVE
-      else if (streamType === "live") {
+      else if (sType === "live") {
         url = buildLiveUrl(iptv.host, iptv.username, iptv.password, streamId, "ts");
       }
 
@@ -823,33 +823,39 @@ export default function PlayerPage() {
           channel.stream_id,
           "ts"
         );
-
+      
+      const browserMode = !window.tizen;
       setStreamUrl(url);
-
       clearTimeout(window.liveFallbackTimeout);
-
       setLoading(true);
 
-      // First try .ts
-      console.log("Trying .ts first for Live TV Channel Change");
-      await startStreaming(url);
+      if (!browserMode) {
+        // Tizen: Try .ts first
+        console.log("Tizen: Trying .ts first for Live TV Channel Change");
+        await startStreaming(url);
 
-      // Give 10 sec to re-try next (.m3u8)
-      window.liveFallbackTimeout = setTimeout(async () => {
-        // Verify we are still looking at the same stream before falling back
-        const currentId = localStorage.getItem("stream_id");
-        if (currentId === channel.stream_id) {
-          console.log("Live TV Fallback: Switching to .m3u8 after 10s timeout");
-          const fallbackUrl = buildLiveUrl(iptv.host, iptv.username, iptv.password, channel.stream_id, "m3u8");
-          if (window.tizen) {
-            try {
-              await avplayManager.stop();
-            } catch (e) {}
+        // Give 5 sec to re-try next (.m3u8) if .ts fails or is slow
+        window.liveFallbackTimeout = setTimeout(async () => {
+          const currentId = localStorage.getItem("stream_id");
+          if (currentId === channel.stream_id) {
+            console.log("Live TV Fallback: Switching to .m3u8");
+            const fallbackUrl = buildLiveUrl(iptv.host, iptv.username, iptv.password, channel.stream_id, "m3u8");
+            if (window.tizen) {
+              try {
+                await avplayManager.stop();
+              } catch (e) {}
+            }
+            await startStreaming(fallbackUrl);
+            setStreamUrl(fallbackUrl);
           }
-          await startStreaming(fallbackUrl);
-          setStreamUrl(fallbackUrl);
-        }
-      }, 10000);
+        }, 5000);
+      } else {
+        // Browser: Prefer .m3u8 immediately
+        console.log("Browser: Preferring .m3u8 for Live TV Channel Change");
+        const browserUrl = buildLiveUrl(iptv.host, iptv.username, iptv.password, channel.stream_id, "m3u8");
+        await startStreaming(browserUrl);
+        setStreamUrl(browserUrl);
+      }
 
       setLoading(false);
 
