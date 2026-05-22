@@ -58,6 +58,7 @@ export default function FavoritesPage() {
 
     if (item.type === "series") {
       localStorage.setItem("selected_series", JSON.stringify(item));
+      navigationManager.push("/favorites"); // Add current page to history
       navigateTo("/series-info");
       return;
     }
@@ -65,6 +66,7 @@ export default function FavoritesPage() {
     localStorage.setItem("stream_id", item.stream_id);
     localStorage.setItem("stream_name", item.name);
     localStorage.setItem("stream_type", item.type);
+    navigationManager.push("/favorites"); // Add current page to history
     navigateTo("/player");
   }
 

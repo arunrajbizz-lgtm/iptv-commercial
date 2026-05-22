@@ -124,7 +124,7 @@ export default function ChannelsPage() {
           localStorage.setItem("stream_id", channels[focusedChannel].stream_id);
           localStorage.setItem("stream_name", channels[focusedChannel].name);
           localStorage.setItem("stream_type", "live");
-          navigationManager.push("/channels");
+          navigationManager.push("/live"); // Corrected to push the current page type
           navigateTo("/player");
           break;
 
@@ -182,13 +182,13 @@ export default function ChannelsPage() {
           items={channels}
           onClose={() => {
             setSearchOpen(false);
-            focusManager.setZone("content");
+            focusManager.setZone("content"); // Restore focus to content after closing modal
           }}
           onSelect={(item) => {
             localStorage.setItem("stream_id", item.stream_id);
             localStorage.setItem("stream_name", item.name);
-            localStorage.setItem("stream_type", "live");
-            navigationManager.push("/channels");
+            localStorage.setItem("stream_type", item.type || "live"); // Use item.type, fallback to live
+            navigationManager.push("/live"); // Corrected to push the current page type
             navigateTo("/player");
           }}
         />

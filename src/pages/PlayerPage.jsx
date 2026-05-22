@@ -101,10 +101,6 @@ export default function PlayerPage() {
   const [streamType,
     setStreamType] = useState("");
 
-  const [,
-    setStreamUrl] =
-    useState("");
-
   const [favorite,
     setFavorite] =
     useState(false);
@@ -411,7 +407,6 @@ export default function PlayerPage() {
         // Browser: Prefer .m3u8 immediately for HLS.js
         const m3u8Url = buildLiveUrl(iptv.host, iptv.username, iptv.password, streamId, "m3u8");
         await startStreaming(m3u8Url);
-        setStreamUrl(m3u8Url);
       } else {
         await startStreaming(url);
       }

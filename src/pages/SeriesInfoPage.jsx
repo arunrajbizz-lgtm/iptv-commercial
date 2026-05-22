@@ -29,6 +29,7 @@ export default function SeriesInfoPage() {
       const iptv = JSON.parse(localStorage.getItem("iptv"));
       const data = await getSeriesInfo(iptv.host, iptv.username, iptv.password, item.series_id);
       
+      console.log("Series Info API Response:", data); // Debugging line: Check this output for episode structure!
       setSeries(data.info || item);
 
       const allEpisodes = [];
@@ -93,6 +94,7 @@ export default function SeriesInfoPage() {
     localStorage.setItem("stream_name", `${series.name} - S${episode.season} E${episode.episode_num || epId}: ${episode.title || "Episode"}`);
     localStorage.setItem("stream_type", "series");
     localStorage.setItem("stream_icon", episode.info?.movie_image || series.cover || "");
+    navigationManager.push("/series-info"); // Add current page to history before navigating to player
     navigateTo("/player");
   }
 

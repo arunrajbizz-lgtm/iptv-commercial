@@ -69,6 +69,7 @@ export default function SearchPage() {
 
     if (item.type === "series") {
       localStorage.setItem("selected_series", JSON.stringify(item));
+      navigationManager.push("/search"); // Add current page to history
       navigateTo("/series-info");
       return;
     }
@@ -76,6 +77,7 @@ export default function SearchPage() {
     localStorage.setItem("stream_id", item.stream_id);
     localStorage.setItem("stream_name", item.name);
     localStorage.setItem("stream_type", item.type);
+    navigationManager.push("/search"); // Add current page to history
     navigateTo("/player");
   }
 
