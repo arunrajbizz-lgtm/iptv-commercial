@@ -182,80 +182,66 @@ export default function PlayerPage() {
     return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   }
 
-  const startStreaming = async (finalUrl) => {
-    // CRITICAL FOR TIZEN: Stop previous instance immediately to free hardware decoder
-    if (window.tizen) {
-      try { await avplayManager.stop(); } catch (e) {}
-    }
+  async function startStreaming(url) {
+    setError("");
+    setLoading(true);
 
-    // Clean up previous Hls.js instance if it exists
-    if (hlsRef.current) {
-      hlsRef.current.destroy();
-      hlsRef.current = null;
-      setHlsInstance(null);
-    }
+    try {
+      if (window.tizen && window.webapis?.avplay) {
+        await avplayManager.stop();
 
-    if (!window.tizen) {
-      // Browser fallback
-      const video = document.getElementById("browser-video");
-      if (!video) {
-        console.error("Browser video element not found.");
+        const playUrl = url; // keep original stream URL
+        await avplayManager.open(playUrl);
+
+        avplayManager.setDisplayRect(0, 0, window.innerWidth, window.innerHeight);
+        avplayManager.prepareAsync(
+          () => {
+            avplayManager.play();
+            setLoading(false);
+          },
+          (err) => {
+            console.error("Tizen AVPlay error:", err);
+            setError("Tizen playback failed");
+            setLoading(false);
+          }
+        );
+
         return;
       }
 
-      if (finalUrl.endsWith(".m3u8") && Hls.isSupported()) {
-        console.log("Using optimized hls.js for M3U8 stream.");
-        
-        // --- OPTIMIZED HLS CONFIG ---
-        const hlsConfig = {
-          manifestLoadingMaxRetry: 10,
-          manifestLoadingRetryDelay: 1000,
-          levelLoadingMaxRetry: 5,
-          fragLoadingMaxRetry: 5,
-          enableWorker: true,
-          lowLatencyMode: true,
-          backBufferLength: 90
-        };
-
-        const hls = new Hls(hlsConfig);
-        
-        hls.on(Hls.Events.ERROR, function (event, data) {
-          if (data.fatal) {
-            switch (data.type) {
-              case Hls.ErrorTypes.NETWORK_ERROR:
-                console.log("Fatal network error, trying to recover...");
-                hls.startLoad();
-                break;
-              case Hls.ErrorTypes.MEDIA_ERROR:
-                console.log("Fatal media error, trying to recover...");
-                hls.recoverMediaError();
-                break;
-              default:
-                console.error("Unrecoverable fatal error:", data);
-                hls.destroy();
-                break;
-            }
-          }
-        });
-
-        hls.loadSource(finalUrl);
-        hls.attachMedia(video);
-        
-        video.play().catch(e => {
-          console.log("Autoplay prevented, user interaction might be needed", e);
-        });
-        
-        hlsRef.current = hls;
-        setHlsInstance(hls);
-      } else {
-        console.log("Using native HTML5 video for stream.");
-        video.src = finalUrl;
-        video.play().catch(e => console.error("Native play failed", e));
+      // Browser fallback only
+      const videoElement = document.getElementById("browser-video");
+      if (!videoElement) {
+        console.error("Browser video element not found.");
+        setError("Browser video element not found.");
+        setLoading(false);
+        return;
       }
-    } else {
-      // Tizen Native
-      await avplayManager.initialize("avplay-container");
-      await avplayManager.play(finalUrl);
+
+      if (Hls.isSupported() && url.includes(".m3u8")) {
+        const hls = new Hls({
+          enableWorker: false,
+          lowLatencyMode: true
+        });
+
+        hls.loadSource(url);
+        hls.attachMedia(videoElement);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          videoElement.play();
+          setLoading(false);
+        });
+
+        hlsRef.current = hls;
+        setHlsInstance(hls); // Re-adding this for AudioSubtitleSelector functionality
+      } else {
+        videoElement.src = url;
+        await videoElement.play();
+        setLoading(false);
+      }
+    } catch (err) {
+      console.error("Playback failed:", err);
+      setError("Playback failed");
+      setLoading(false);
     }
   };
 
