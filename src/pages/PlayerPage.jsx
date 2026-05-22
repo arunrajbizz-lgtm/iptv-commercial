@@ -101,6 +101,9 @@ export default function PlayerPage() {
   const [streamType,
     setStreamType] = useState("");
 
+  const [streamUrl,
+    setStreamUrl] = useState("");
+
   const [favorite,
     setFavorite] =
     useState(false);
@@ -279,6 +282,8 @@ export default function PlayerPage() {
             "iptv"
           )
         );
+
+      if (!iptv) throw new Error("Account information missing");
 
       const streamId =
         localStorage.getItem(

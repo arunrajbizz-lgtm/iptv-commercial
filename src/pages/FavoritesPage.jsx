@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { KEYS } from "../utils/tizenRemote";
 import Sidebar from "../components/Sidebar";
 import focusManager from "../core/FocusManager";
+import navigationManager from "../core/NavigationManager";
 
 export default function FavoritesPage() {
   const [favorites, setFavorites] = useState([]);
