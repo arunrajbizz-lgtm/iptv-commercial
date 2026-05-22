@@ -49,7 +49,6 @@ export default function MoviesPage() {
 
   const loadMovies = useCallback(async (categoryId) => {
     try {
-      setVisibleLimit(PAGE_SIZE);
       const iptv = JSON.parse(localStorage.getItem("iptv"));
       const data = await getMovies(iptv.host, iptv.username, iptv.password, categoryId);
       setMovies(data || []);
@@ -58,14 +57,19 @@ export default function MoviesPage() {
       const currentStreamId = localStorage.getItem("stream_id");
       if (currentStreamId && data) {
         const movieIdx = data.findIndex(m => String(m.stream_id) === String(currentStreamId));
-        if (movieIdx > -1) setFocusedMovie(movieIdx);
+        if (movieIdx > -1) {
+          setFocusedMovie(movieIdx);
+          // Ensure the restored item is actually rendered
+          if (movieIdx >= visibleLimit) {
+            setVisibleLimit(movieIdx + PAGE_SIZE);
+          }
+        }
         else setFocusedMovie(0);
       } else {
         setFocusedMovie(0);
       }
     } catch (error) { console.log(error); }
-  }, []);
-
+  }, [visibleLimit]);
 
   const filteredCategories = useMemo(() => {
     if (!catSearch) return categories;
@@ -232,7 +236,7 @@ export default function MoviesPage() {
          </h1>
 
          <div className="content-grid" ref={gridRef}>
-            {movies.map((movie, index) => (
+            {movies.slice(0, visibleLimit).map((movie, index) => (
               <div 
                 key={`${movie.stream_id}-${index}`}
                 className={`content-card portrait-card ${focusedMovie === index && zone === "content" ? "focused" : ""}`}

@@ -187,10 +187,6 @@ export default function PlayerPage() {
       setHlsInstance(null);
     }
 
-    if (window.tizen) {
-      try { await avplayManager.stop(); } catch (e) {}
-    }
-
     if (!window.tizen) {
       // Browser fallback
       const video = document.getElementById("browser-video");
@@ -391,11 +387,10 @@ export default function PlayerPage() {
 
       if (sType === "live" && !browserMode) {
         // Tizen: Try .ts first
-        console.log("Tizen: Trying .ts first for Live TV");
         const tsUrl = buildLiveUrl(iptv.host, iptv.username, iptv.password, streamId, "ts");
         await startStreaming(tsUrl);
 
-        // Give 10 sec to re-try next (.m3u8) if .ts fails or is slow
+        // Give 10 sec to re-try next (.m3u8) as requested
         window.liveFallbackTimeout = setTimeout(async () => {
           const currentId = localStorage.getItem("stream_id");
           if (currentId === streamId) {
@@ -407,9 +402,9 @@ export default function PlayerPage() {
         }, 10000);
       } else if (sType === "live" && browserMode) {
         // Browser: Prefer .m3u8 immediately for HLS.js
-        const browserUrl = buildLiveUrl(iptv.host, iptv.username, iptv.password, streamId, "m3u8");
-        await startStreaming(browserUrl);
-        setStreamUrl(browserUrl);
+        const m3u8Url = buildLiveUrl(iptv.host, iptv.username, iptv.password, streamId, "m3u8");
+        await startStreaming(m3u8Url);
+        setStreamUrl(m3u8Url);
       } else {
         await startStreaming(url);
       }
@@ -472,6 +467,13 @@ export default function PlayerPage() {
     function handleKeys(event) {
 
       autoHide();
+
+      // Ensure controls are shown on any key press
+      if (!showControls && event.keyCode !== KEYS.BACK) {
+        setShowControls(true);
+        autoHide();
+        return;
+      }
 
       switch (event.keyCode) {
 
@@ -594,6 +596,12 @@ export default function PlayerPage() {
 
           break;
 
+        // INFO/TOOLS for Audio Selection
+        case KEYS.INFO:
+        case 447: // Extra INFO code
+          handleAction("AUDIO_SUB");
+          break;
+
         // RED
         case KEYS.RED:
 
@@ -647,7 +655,7 @@ export default function PlayerPage() {
     currentIndex,
     channels,
     favorite,
-    isBrowser
+    isBrowser, showControls, streamType
   ]);
 
   // HISTORY
@@ -937,6 +945,12 @@ export default function PlayerPage() {
         focusManager.setZone("modal");
         break;
 
+      case "STOP":
+        if (isBrowser) document.getElementById("browser-video").src = "";
+        else avplayManager.stop();
+        navigateTo(streamType === "live" ? "/live" : streamType === "movie" ? "/movies" : "/series");
+        break;
+
       case "EPG":
         setShowEPG(true);
         focusManager.setZone("overlay");
@@ -1022,7 +1036,10 @@ export default function PlayerPage() {
       {/* SETTINGS */}
       <AudioSubtitleSelector
         visible={showSettings}
-        videoRef={{ current: hlsInstance?.media || (isBrowser ? document.getElementById("browser-video") : null) }}
+        // Pass hlsInstance and avplay reference for track switching
+        player={hlsInstance} 
+        isTizen={!isBrowser}
+        videoRef={{ current: isBrowser ? document.getElementById("browser-video") : null }}
         onClose={() => setShowSettings(false)}
       />
 

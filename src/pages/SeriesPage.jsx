@@ -58,7 +58,12 @@ export default function SeriesPage() {
       const lastSelected = JSON.parse(localStorage.getItem("selected_series"));
       if (lastSelected && data) {
         const idx = data.findIndex(s => String(s.series_id) === String(lastSelected.series_id));
-        if (idx > -1) setFocusedSeries(idx);
+        if (idx > -1) {
+          setFocusedSeries(idx);
+          if (idx >= visibleLimit) {
+            setVisibleLimit(idx + PAGE_SIZE);
+          }
+        }
         else setFocusedSeries(0);
       } else {
         setFocusedSeries(0);
@@ -228,7 +233,7 @@ export default function SeriesPage() {
          </h1>
 
          <div className="content-grid" ref={gridRef}>
-            {series.map((item, index) => (
+            {series.slice(0, visibleLimit).map((item, index) => (
               <div 
                 key={`${item.series_id}-${index}`}
                 className={`content-card portrait-card ${focusedSeries === index && zone === "content" ? "focused" : ""}`}
