@@ -1,9 +1,10 @@
 import { navigateTo } from "../utils/navigation";
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { KEYS } from "../utils/tizenRemote";
 import { getMovieCategories, getMovies } from "../services/xtreamApi";
 import Sidebar from "../components/Sidebar";
 import focusManager from "../core/FocusManager";
+import navigationManager from "../core/NavigationManager";
 
 export default function MoviesPage() {
   const [categories, setCategories] = useState([]);
@@ -13,6 +14,10 @@ export default function MoviesPage() {
   const [zone, setZone] = useState("content");
   const [showDrawer, setShowDrawer] = useState(false);
   const [catSearch, setCatSearch] = useState("");
+
+  const PAGE_SIZE = 30;
+  const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE);
+
   const gridRef = useRef(null);
   const catListRef = useRef(null);
   const COLS = 6;
@@ -28,18 +33,39 @@ export default function MoviesPage() {
       if (!iptv) return;
       const data = await getMovieCategories(iptv.host, iptv.username, iptv.password);
       setCategories(data || []);
-      if (data?.length) loadMovies(data[0].category_id);
+      
+      // Restore last category
+      const savedCatId = localStorage.getItem("movie_focused_category_id");
+      let startIdx = 0;
+      if (savedCatId && data) {
+        const idx = data.findIndex(c => String(c.category_id) === String(savedCatId));
+        if (idx > -1) startIdx = idx;
+      }
+      
+      setFocusedCategory(startIdx);
+      if (data?.length) loadMovies(data[startIdx].category_id);
     } catch (error) { console.log(error); }
   }
 
-  async function loadMovies(categoryId) {
+  const loadMovies = useCallback(async (categoryId) => {
     try {
+      setVisibleLimit(PAGE_SIZE);
       const iptv = JSON.parse(localStorage.getItem("iptv"));
       const data = await getMovies(iptv.host, iptv.username, iptv.password, categoryId);
       setMovies(data || []);
-      setFocusedMovie(0);
+      
+      // Restore focus to last played movie if in this category
+      const currentStreamId = localStorage.getItem("stream_id");
+      if (currentStreamId && data) {
+        const movieIdx = data.findIndex(m => String(m.stream_id) === String(currentStreamId));
+        if (movieIdx > -1) setFocusedMovie(movieIdx);
+        else setFocusedMovie(0);
+      } else {
+        setFocusedMovie(0);
+      }
     } catch (error) { console.log(error); }
-  }
+  }, []);
+
 
   const filteredCategories = useMemo(() => {
     if (!catSearch) return categories;
@@ -66,7 +92,13 @@ export default function MoviesPage() {
           if (zone === "drawer") {
              setFocusedCategory(prev => (prev < filteredCategories.length - 1 ? prev + 1 : 0));
           } else {
-             if (focusedMovie + COLS < movies.length) setFocusedMovie(prev => prev + COLS);
+             if (focusedMovie + COLS < movies.length) {
+                const nextIdx = focusedMovie + COLS;
+                setFocusedMovie(nextIdx);
+                if (nextIdx >= visibleLimit - COLS) {
+                   setVisibleLimit(prev => prev + PAGE_SIZE);
+                }
+             }
           }
           break;
 
@@ -121,7 +153,7 @@ export default function MoviesPage() {
              setShowDrawer(false);
              setZone("content");
           } else {
-             navigateTo("/dashboard");
+             navigateTo(navigationManager.back());
           }
           break;
 
@@ -132,7 +164,7 @@ export default function MoviesPage() {
 
     document.addEventListener("keydown", handleKeys);
     return () => document.removeEventListener("keydown", handleKeys);
-  }, [zone, focusedCategory, focusedMovie, categories, filteredCategories, movies, showDrawer]);
+  }, [zone, focusedCategory, focusedMovie, categories, filteredCategories, movies, showDrawer, visibleLimit, loadMovies]);
 
   useEffect(() => {
      if (zone === "content" && gridRef.current) {
@@ -154,6 +186,10 @@ export default function MoviesPage() {
     localStorage.setItem("stream_name", movie.name);
     localStorage.setItem("stream_type", "movie");
     localStorage.setItem("stream_icon", movie.stream_icon);
+    
+    localStorage.setItem("movie_focused_category_id", categories[focusedCategory]?.category_id);
+    
+    navigationManager.push("/movies");
     navigateTo("/player");
   }
 

@@ -187,6 +187,10 @@ export default function PlayerPage() {
       setHlsInstance(null);
     }
 
+    if (window.tizen) {
+      try { await avplayManager.stop(); } catch (e) {}
+    }
+
     if (!window.tizen) {
       // Browser fallback
       const video = document.getElementById("browser-video");
@@ -247,7 +251,7 @@ export default function PlayerPage() {
     } else {
       // Tizen Native
       try {
-        await avplayManager.stop();
+        // Already stopped above
       } catch (e) {}
       await avplayManager.initialize("avplay-container");
       await avplayManager.play(finalUrl);

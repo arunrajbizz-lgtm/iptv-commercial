@@ -1,9 +1,10 @@
 import { navigateTo } from "../utils/navigation";
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { KEYS } from "../utils/tizenRemote";
 import { getSeriesCategories, getSeries } from "../services/xtreamApi";
 import Sidebar from "../components/Sidebar";
 import focusManager from "../core/FocusManager";
+import navigationManager from "../core/NavigationManager";
 
 export default function SeriesPage() {
   const [categories, setCategories] = useState([]);
@@ -13,6 +14,10 @@ export default function SeriesPage() {
   const [zone, setZone] = useState("content");
   const [showDrawer, setShowDrawer] = useState(false);
   const [catSearch, setCatSearch] = useState("");
+
+  const PAGE_SIZE = 30;
+  const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE);
+
   const gridRef = useRef(null);
   const catListRef = useRef(null);
   const COLS = 6;
@@ -28,18 +33,39 @@ export default function SeriesPage() {
       if (!iptv) return;
       const data = await getSeriesCategories(iptv.host, iptv.username, iptv.password);
       setCategories(data || []);
-      if (data?.length) loadSeries(data[0].category_id);
+      
+      // Restore last category
+      const savedCatId = localStorage.getItem("series_focused_category_id");
+      let startIdx = 0;
+      if (savedCatId && data) {
+        const idx = data.findIndex(c => String(c.category_id) === String(savedCatId));
+        if (idx > -1) startIdx = idx;
+      }
+      
+      setFocusedCategory(startIdx);
+      if (data?.length) loadSeries(data[startIdx].category_id);
     } catch (error) { console.log(error); }
   }
 
-  async function loadSeries(categoryId) {
+  const loadSeries = useCallback(async (categoryId) => {
     try {
+      setVisibleLimit(PAGE_SIZE);
       const iptv = JSON.parse(localStorage.getItem("iptv"));
       const data = await getSeries(iptv.host, iptv.username, iptv.password, categoryId);
       setSeries(data || []);
-      setFocusedSeries(0);
+      
+      // Restore focus to last selected series
+      const lastSelected = JSON.parse(localStorage.getItem("selected_series"));
+      if (lastSelected && data) {
+        const idx = data.findIndex(s => String(s.series_id) === String(lastSelected.series_id));
+        if (idx > -1) setFocusedSeries(idx);
+        else setFocusedSeries(0);
+      } else {
+        setFocusedSeries(0);
+      }
     } catch (error) { console.log(error); }
-  }
+  }, []);
+
 
   const filteredCategories = useMemo(() => {
     if (!catSearch) return categories;
@@ -66,7 +92,13 @@ export default function SeriesPage() {
           if (zone === "drawer") {
              setFocusedCategory(prev => (prev < filteredCategories.length - 1 ? prev + 1 : 0));
           } else {
-             if (focusedSeries + COLS < series.length) setFocusedSeries(prev => prev + COLS);
+             if (focusedSeries + COLS < series.length) {
+                const nextIdx = focusedSeries + COLS;
+                setFocusedSeries(nextIdx);
+                if (nextIdx >= visibleLimit - COLS) {
+                   setVisibleLimit(prev => prev + PAGE_SIZE);
+                }
+             }
           }
           break;
 
@@ -121,7 +153,7 @@ export default function SeriesPage() {
              setShowDrawer(false);
              setZone("content");
           } else {
-             navigateTo("/dashboard");
+             navigateTo(navigationManager.back());
           }
           break;
 
@@ -132,7 +164,7 @@ export default function SeriesPage() {
 
     document.addEventListener("keydown", handleKeys);
     return () => document.removeEventListener("keydown", handleKeys);
-  }, [zone, focusedCategory, focusedSeries, categories, filteredCategories, series, showDrawer]);
+  }, [zone, focusedCategory, focusedSeries, categories, filteredCategories, series, showDrawer, visibleLimit, loadSeries]);
 
   useEffect(() => {
      if (zone === "content" && gridRef.current) {
@@ -150,7 +182,10 @@ export default function SeriesPage() {
 
   function openSeries(item) {
     if (!item) return;
+    localStorage.setItem("series_focused_category_id", categories[focusedCategory]?.category_id);
     localStorage.setItem("selected_series", JSON.stringify(item));
+    
+    navigationManager.push("/series");
     navigateTo("/series-info");
   }
 
