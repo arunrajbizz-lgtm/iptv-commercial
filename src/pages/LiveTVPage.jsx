@@ -15,6 +15,9 @@ export default function LiveTVPage() {
   const [zone, setZone] = useState("content");
   const [showDrawer, setShowDrawer] = useState(false);
   const [catSearch, setCatSearch] = useState("");
+  
+  const PAGE_SIZE = 30;
+  const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE);
 
   const channelListRef = useRef(null);
   const catListRef = useRef(null);
@@ -50,6 +53,11 @@ export default function LiveTVPage() {
     }
   }
 
+  // Reset visible limit when category changes to start from "page 1"
+  useEffect(() => {
+    setVisibleLimit(PAGE_SIZE);
+  }, [focusedCategory]);
+
   const filteredCategories = useMemo(() => {
     if (!catSearch) return categories;
     return categories.filter(c => 
@@ -84,7 +92,12 @@ export default function LiveTVPage() {
           if (zone === "drawer") {
             setFocusedCategory(prev => (prev > 0 ? prev - 1 : filteredCategories.length - 1));
           } else {
-            if (focusedChannel > 0) setFocusedChannel(prev => prev - 1);
+            if (focusedChannel > 0) {
+              const nextIdx = focusedChannel - 1;
+              setFocusedChannel(nextIdx);
+              // Optional: You could reduce visibleLimit here too if memory is tight, 
+              // but usually keeping it expanded is fine.
+            }
           }
           break;
 
@@ -92,7 +105,13 @@ export default function LiveTVPage() {
           if (zone === "drawer") {
             setFocusedCategory(prev => (prev < filteredCategories.length - 1 ? prev + 1 : 0));
           } else {
-            if (focusedChannel < filteredChannels.length - 1) setFocusedChannel(prev => prev + 1);
+            if (focusedChannel < filteredChannels.length - 1) {
+              const nextIdx = focusedChannel + 1;
+              setFocusedChannel(nextIdx);
+              if (nextIdx >= visibleLimit - 5) {
+                setVisibleLimit(prev => prev + PAGE_SIZE);
+              }
+            }
           }
           break;
 
@@ -133,7 +152,7 @@ export default function LiveTVPage() {
             setShowDrawer(false);
             setZone("content");
           } else {
-            navigateTo("/dashboard");
+            navigateTo(navigationManager.back());
           }
           break;
 
@@ -144,7 +163,7 @@ export default function LiveTVPage() {
 
     document.addEventListener("keydown", handleKeys);
     return () => document.removeEventListener("keydown", handleKeys);
-  }, [zone, focusedCategory, focusedChannel, categories, filteredCategories, filteredChannels, showDrawer]);
+  }, [zone, focusedCategory, focusedChannel, categories, filteredCategories, filteredChannels, showDrawer, visibleLimit]);
 
   useEffect(() => {
      if (zone === "content" && channelListRef.current) {
@@ -214,7 +233,7 @@ export default function LiveTVPage() {
 
         {loading ? <div className="netflix-loader" /> : (
              <div className="channel-list-v" ref={channelListRef}>
-                {filteredChannels.map((channel, index) => (
+                {filteredChannels.slice(0, visibleLimit).map((channel, index) => (
                   <div 
                     key={`${channel.stream_id}-${index}`}
                     className={`channel-item ${focusedChannel === index && zone === "content" ? "focused" : ""}`}
