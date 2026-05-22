@@ -385,27 +385,24 @@ export default function PlayerPage() {
 
       setStreamUrl(url);
 
-      if (sType === "live" && !storedStreamUrl && !browserMode) {
+      if (sType === "live" && !browserMode) {
         // Tizen: Try .ts first
         console.log("Tizen: Trying .ts first for Live TV");
-        await startStreaming(url);
+        const tsUrl = buildLiveUrl(iptv.host, iptv.username, iptv.password, streamId, "ts");
+        await startStreaming(tsUrl);
 
-        // Give 5 sec to re-try next (.m3u8) if .ts fails or is slow
+        // Give 3 sec to re-try next (.m3u8) if .ts fails or is slow
         window.liveFallbackTimeout = setTimeout(async () => {
           const currentId = localStorage.getItem("stream_id");
           if (currentId === streamId) {
             console.log("Live TV Fallback: Switching to .m3u8");
             const fallbackUrl = buildLiveUrl(iptv.host, iptv.username, iptv.password, streamId, "m3u8");
-            if (window.tizen) {
-              try { await avplayManager.stop(); } catch (e) {}
-            }
             await startStreaming(fallbackUrl);
             setStreamUrl(fallbackUrl);
           }
-        }, 5000);
-      } else if (sType === "live" && !storedStreamUrl && browserMode) {
+        }, 3500);
+      } else if (sType === "live" && browserMode) {
         // Browser: Prefer .m3u8 immediately for HLS.js
-        console.log("Browser: Preferring .m3u8 for Live TV");
         const browserUrl = buildLiveUrl(iptv.host, iptv.username, iptv.password, streamId, "m3u8");
         await startStreaming(browserUrl);
         setStreamUrl(browserUrl);
@@ -535,7 +532,14 @@ export default function PlayerPage() {
             avplayManager.stop();
           }
 
-          navigateTo(navigationManager.back());
+          // Explicitly navigate back to the correct list
+          if (streamType === "live") {
+            navigateTo("/live");
+          } else if (streamType === "movie") {
+            navigateTo("/movies");
+          } else {
+            navigateTo("/series");
+          }
 
           break;
 
@@ -605,7 +609,14 @@ export default function PlayerPage() {
             avplayManager.stop();
           }
 
-          navigateTo(navigationManager.back());
+          // Explicitly navigate back to the correct list
+          if (streamType === "live") {
+            navigateTo("/live");
+          } else if (streamType === "movie") {
+            navigateTo("/movies");
+          } else {
+            navigateTo("/series");
+          }
 
           break;
 
