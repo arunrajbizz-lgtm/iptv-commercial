@@ -1,154 +1,118 @@
-// LOAD
-export function getFavorites() {
+/**
+ * FAVORITES MANAGER (Advanced)
+ * Supports multiple named lists.
+ * Format: { "ListName": [items], ... }
+ */
 
+// MIGRATION & LOAD
+export function getFavoriteLists() {
   try {
-
-    return JSON.parse(
-
-      localStorage.getItem(
-        "favorites"
-      )
-
-    ) || [];
-
-  } catch (error) {
-
-    console.log(error);
-
-    return [];
-  }
-}
-
-// SAVE
-export function saveFavorites(
-  favorites
-) {
-
-  localStorage.setItem(
-
-    "favorites",
-
-    JSON.stringify(
-      favorites
-    )
-  );
-}
-
-// EXISTS
-export function isFavorite(
-  streamId
-) {
-
-  const favorites =
-    getFavorites();
-
-  return favorites.some(
-
-    item =>
-
-      String(item.stream_id)
-      ===
-      String(streamId)
-  );
-}
-
-// ADD
-export function addFavorite(
-  item
-) {
-
-  try {
-
-    const favorites =
-      getFavorites();
-
-    // ALREADY
-    const exists =
-      favorites.find(
-
-        fav =>
-
-          String(fav.stream_id)
-          ===
-          String(item.stream_id)
-      );
-
-    if (exists) {
-
-      return;
+    const data = localStorage.getItem("favorites");
+    if (!data) return { "General": [] };
+    
+    const parsed = JSON.parse(data);
+    
+    // Support old array format
+    if (Array.isArray(parsed)) {
+      return { "General": parsed };
     }
-
-    favorites.unshift(item);
-
-    saveFavorites(
-      favorites
-    );
-
-    console.log(
-      "Favorite Added"
-    );
-
+    
+    return parsed;
   } catch (error) {
-
-    console.log(error);
+    console.error("Favorites Load Error:", error);
+    return { "General": [] };
   }
 }
 
-// REMOVE
-export function removeFavorite(
-  streamId
-) {
+// SAVE ALL
+export function saveFavoriteLists(lists) {
+  localStorage.setItem("favorites", JSON.stringify(lists));
+}
 
+// GET FAVORITES FOR A LIST
+export function getFavorites(listName = "General") {
+  const lists = getFavoriteLists();
+  return lists[listName] || [];
+}
+
+// EXISTS IN ANY LIST (or specific list)
+export function isFavorite(streamId, listName = null) {
+  const lists = getFavoriteLists();
+  
+  if (listName) {
+    return (lists[listName] || []).some(item => String(item.stream_id) === String(streamId));
+  }
+  
+  // Check all lists
+  return Object.values(lists).some(list => 
+    list.some(item => String(item.stream_id) === String(streamId))
+  );
+}
+
+// ADD TO LIST
+export function addFavorite(item, listName = "General") {
   try {
-
-    const favorites =
-      getFavorites();
-
-    const updated =
-      favorites.filter(
-
-        item =>
-
-          String(item.stream_id)
-          !==
-          String(streamId)
-      );
-
-    saveFavorites(
-      updated
-    );
-
-    console.log(
-      "Favorite Removed"
-    );
-
+    const lists = getFavoriteLists();
+    
+    if (!lists[listName]) {
+      lists[listName] = [];
+    }
+    
+    const exists = lists[listName].find(fav => String(fav.stream_id) === String(item.stream_id));
+    if (exists) return;
+    
+    lists[listName].unshift(item);
+    saveFavoriteLists(lists);
+    
+    console.log(`Added to ${listName}`);
   } catch (error) {
-
-    console.log(error);
+    console.error("Add Favorite Error:", error);
   }
 }
 
-// TOGGLE
-export function toggleFavorite(
-  item
-) {
+// REMOVE FROM LIST
+export function removeFavorite(streamId, listName = "General") {
+  try {
+    const lists = getFavoriteLists();
+    
+    if (!lists[listName]) return;
+    
+    lists[listName] = lists[listName].filter(item => String(item.stream_id) !== String(streamId));
+    saveFavoriteLists(lists);
+    
+    console.log(`Removed from ${listName}`);
+  } catch (error) {
+    console.error("Remove Favorite Error:", error);
+  }
+}
 
-  if (
-
-    isFavorite(
-      item.stream_id
-    )
-
-  ) {
-
-    removeFavorite(
-      item.stream_id
-    );
-
+// TOGGLE (Default list)
+export function toggleFavorite(item, listName = "General") {
+  if (isFavorite(item.stream_id, listName)) {
+    removeFavorite(item.stream_id, listName);
     return false;
   }
-
-  addFavorite(item);
-
+  addFavorite(item, listName);
   return true;
+}
+
+// MANAGE LISTS
+export function createList(name) {
+  const lists = getFavoriteLists();
+  if (lists[name]) return false;
+  lists[name] = [];
+  saveFavoriteLists(lists);
+  return true;
+}
+
+export function deleteList(name) {
+  if (name === "General") return false; // Protect default list
+  const lists = getFavoriteLists();
+  delete lists[name];
+  saveFavoriteLists(lists);
+  return true;
+}
+
+export function getListNames() {
+  return Object.keys(getFavoriteLists());
 }

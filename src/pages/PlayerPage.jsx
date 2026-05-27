@@ -39,6 +39,8 @@ from "../core/FocusManager";
 import navigationManager
 from "../core/NavigationManager";
 
+import usePlayerGestures from "../hooks/usePlayerGestures";
+
 import {
   saveResumePosition,
   getResumePosition
@@ -111,6 +113,10 @@ export default function PlayerPage() {
   const [currentTime, setCurrentTime] = useState("00:00");
   const [duration, setDuration] = useState("00:00");
   const [progress, setProgress] = useState(0);
+
+  const gestures = usePlayerGestures(null, (action) => {
+    handleAction(action);
+  });
 
   // INIT
   useEffect(() => {
@@ -908,6 +914,22 @@ export default function PlayerPage() {
         }
         break;
 
+      case "RW_10":
+        if (streamType !== "live") {
+          const target = Math.max(0, getCurrentTime() - 10);
+          if (!window.tizen) video.currentTime = target;
+          else avplayManager.seek(target);
+        }
+        break;
+
+      case "FF_10":
+        if (streamType !== "live") {
+          const target = getCurrentTime() + 10;
+          if (!window.tizen) video.currentTime = target;
+          else avplayManager.seek(target);
+        }
+        break;
+
       case "PREV":
         previousChannel();
         break;
@@ -942,13 +964,18 @@ export default function PlayerPage() {
 
   return (
 
-    <div style={{
-      width: "100%",
-      height: "100vh",
-      background: "transparent",
-      position: "relative",
-      overflow: "hidden"
-    }}>
+    <div 
+      onTouchStart={gestures.onTouchStart}
+      onTouchMove={gestures.onTouchMove}
+      onTouchEnd={gestures.onTouchEnd}
+      style={{
+        width: "100%",
+        height: "100vh",
+        background: "transparent",
+        position: "relative",
+        overflow: "hidden"
+      }}
+    >
 
       {/* PLAYER */}
 

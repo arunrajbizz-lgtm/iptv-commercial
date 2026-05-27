@@ -141,7 +141,8 @@ export function registerRemoteKeys() {
         "Search",
         "Caption",
         "Extra",
-        "Teletext"
+        "Teletext",
+        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"
       ];
 
       keys.forEach(function (key) {

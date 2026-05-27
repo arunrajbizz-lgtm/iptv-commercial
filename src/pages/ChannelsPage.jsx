@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import { getLiveStreams } from "../services/xtreamApi";
 import { KEYS } from "../utils/tizenRemote";
 import SearchModal from "../components/SearchModal";
-import { addFavorite, removeFavorite, isFavorite } from "../utils/favorites";
+import { addFavorite, removeFavorite, isFavorite } from "../utils/FavoritesManager";
 import Sidebar from "../components/Sidebar";
 import focusManager from "../core/FocusManager";
 import navigationManager from "../core/NavigationManager";
