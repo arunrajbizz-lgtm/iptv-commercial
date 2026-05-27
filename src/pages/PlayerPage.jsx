@@ -327,6 +327,7 @@ export default function PlayerPage() {
       }
 
       let url = "";
+      const container_extension = localStorage.getItem("container_extension") || "mp4";
 
       // LIVE
       if (
@@ -356,7 +357,8 @@ export default function PlayerPage() {
 
             iptv.password,
 
-            streamId
+            streamId,
+            container_extension
           );
       }
 
@@ -372,7 +374,8 @@ export default function PlayerPage() {
 
             iptv.password,
 
-            streamId
+            streamId,
+            container_extension
           );
       }
 
@@ -432,7 +435,8 @@ export default function PlayerPage() {
 
       setLoading(false);
 
-      autoHide();
+      // Trigger controls on initial load but don't hide yet
+      setShowControls(true);
 
     } catch (error) {
 
@@ -453,12 +457,13 @@ export default function PlayerPage() {
       window.controlsTimeout
     );
 
-    window.controlsTimeout =
-      setTimeout(() => {
-
-        setShowControls(false);
-
-      }, 5000);
+    // Only auto-hide if NOT loading
+    if (!loading) {
+      window.controlsTimeout =
+        setTimeout(() => {
+          setShowControls(false);
+        }, 5000);
+    }
   }
 
   // REMOTE
@@ -629,7 +634,8 @@ export default function PlayerPage() {
     channels,
     favorite,
     hlsInstance,
-    streamType
+    streamType,
+    loading
   ]);
 
   // HISTORY

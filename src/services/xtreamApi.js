@@ -164,7 +164,7 @@ export async function getSeriesInfo(host, username, password, seriesId) {
     host,
     username,
     password,
-    `&action=get_series_info&series_id=${encodeURIComponent(seriesId)}`
+    `get_series_info&series_id=${encodeURIComponent(seriesId)}`
   );
 
   return data || {};
@@ -175,7 +175,7 @@ export async function getEPG(host, username, password, streamId) {
     host,
     username,
     password,
-    `&action=get_simple_data_table&stream_id=${encodeURIComponent(streamId)}`
+    `get_simple_data_table&stream_id=${encodeURIComponent(streamId)}`
   );
 
   return data || {};
@@ -190,35 +190,35 @@ export function buildLiveUrl(
   extension = "m3u8"
 ) {
   const fixedHost = normalizeXtreamHost(host);
-  
+
   // If streamId already contains an extension, don't add another one
   const cleanId = String(streamId).split(".")[0];
 
   return `${fixedHost}/live/${username}/${password}/${cleanId}.${extension}`;
 }
 
-// MOVIE URL - Tizen TV direct mp4
+// MOVIE URL
 export function buildMovieUrl(
   host,
   username,
   password,
   streamId,
-  extension = "mp4"
+  extension = ""
 ) {
   const fixedHost = normalizeXtreamHost(host);
-
-  return `${fixedHost}/movie/${username}/${password}/${streamId}.${extension}`;
+  const ext = extension ? `.${extension}` : "";
+  return `${fixedHost}/movie/${username}/${password}/${streamId}${ext}`;
 }
 
-// SERIES URL - Tizen TV direct mp4
+// SERIES URL
 export function buildSeriesUrl(
   host,
   username,
   password,
   episodeId,
-  extension = "mp4"
+  extension = ""
 ) {
   const fixedHost = normalizeXtreamHost(host);
-
-  return `${fixedHost}/series/${username}/${password}/${episodeId}.${extension}`;
+  const ext = extension ? `.${extension}` : "";
+  return `${fixedHost}/series/${username}/${password}/${episodeId}${ext}`;
 }

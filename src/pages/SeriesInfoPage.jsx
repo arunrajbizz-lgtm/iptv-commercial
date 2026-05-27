@@ -57,6 +57,11 @@ export default function SeriesInfoPage() {
 
   useEffect(() => {
     function handleKeys(event) {
+      if (!episodes || episodes.length === 0) {
+        if (event.keyCode === KEYS.BACK) navigateTo("/series");
+        return;
+      }
+
       switch (event.keyCode) {
         case KEYS.UP:
           if (focusedEpisode > 0) setFocusedEpisode(prev => prev - 1);
@@ -86,7 +91,6 @@ export default function SeriesInfoPage() {
     const epId = episode.id || episode.episode_id;
     if (!epId) {
       console.error("Episode ID not found", episode);
-      alert("Episode ID not found");
       return;
     }
 
@@ -94,7 +98,7 @@ export default function SeriesInfoPage() {
     localStorage.setItem("stream_name", `${series.name} - S${episode.season} E${episode.episode_num || epId}: ${episode.title || "Episode"}`);
     localStorage.setItem("stream_type", "series");
     localStorage.setItem("stream_icon", episode.info?.movie_image || series.cover || "");
-    navigationManager.push("/series-info"); // Add current page to history before navigating to player
+    localStorage.setItem("container_extension", episode.container_extension || "mp4");
     navigateTo("/player");
   }
 
