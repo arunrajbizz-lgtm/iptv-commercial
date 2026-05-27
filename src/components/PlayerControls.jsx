@@ -109,6 +109,7 @@ export default function PlayerControls({
                 <button
                   key={ctrl.id}
                   className={`player-btn ${focused === index ? "focused" : ""}`}
+                  onClick={() => onAction(ctrl.id)}
                 >
                   {ctrl.label}
                 </button>
@@ -122,6 +123,7 @@ export default function PlayerControls({
                   <button
                     key={ctrl.id}
                     className={`player-btn ${focused === globalIndex ? "focused" : ""}`}
+                    onClick={() => onAction(ctrl.id)}
                   >
                     {ctrl.label}
                   </button>

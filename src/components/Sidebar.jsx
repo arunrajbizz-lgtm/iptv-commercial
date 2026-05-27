@@ -79,7 +79,7 @@ export default function Sidebar({ active }) {
   return (
     <aside className={`app-sidebar ${expanded ? "expanded" : ""}`}>
       <div className="sidebar-logo">
-        {expanded ? "STREAMDECK" : "S"}
+        {expanded ? "STREAMVAULT" : "S"}
       </div>
 
       <nav className="sidebar-nav">

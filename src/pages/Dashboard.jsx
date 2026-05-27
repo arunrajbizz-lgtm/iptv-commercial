@@ -92,7 +92,7 @@ export default function Dashboard() {
           <div className="hero-overlay" />
           
           <div className="hero-content fade-in">
-            <p className="hero-tag">Streamdeck Original</p>
+            <p className="hero-tag">StreamVault Original</p>
             <h1 className="hero-title">Discover Your<br/>Next Favorite</h1>
             
             <div className="hero-meta">

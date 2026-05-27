@@ -19,16 +19,32 @@ export default function MovieInfoPage() {
   async function loadMovieData() {
     try {
       setLoading(true);
-      const item = JSON.parse(localStorage.getItem("selected_movie"));
-      if (!item) return;
+      const itemStr = localStorage.getItem("selected_movie");
+      if (!itemStr) {
+        setLoading(false);
+        return;
+      }
+      const item = JSON.parse(itemStr);
 
       const iptv = JSON.parse(localStorage.getItem("iptv"));
+      if (!iptv) {
+         setMovie(item);
+         setLoading(false);
+         return;
+      }
+
       const data = await getMovieInfo(iptv.host, iptv.username, iptv.password, item.stream_id);
       
-      setMovie(data.info ? { ...data.info, ...item } : item);
+      if (data && data.info) {
+        setMovie({ ...item, ...data.info });
+      } else {
+        setMovie(item);
+      }
       setLoading(false);
     } catch (error) { 
-      console.log(error);
+      console.log("Load Movie Error", error);
+      const item = JSON.parse(localStorage.getItem("selected_movie"));
+      if (item) setMovie(item);
       setLoading(false);
     }
   }

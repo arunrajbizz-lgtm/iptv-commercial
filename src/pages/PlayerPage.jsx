@@ -1035,19 +1035,17 @@ export default function PlayerPage() {
       }
 
       {/* NEW CONTROLS */}
-      <div style={{ position: "relative", zIndex: 10000 }}>
-        <PlayerControls
-          visible={showControls}
-          channelName={streamName}
-          onAction={handleAction}
-          paused={paused}
-          streamType={streamType}
-          currentTime={currentTime}
-          duration={duration}
-          progress={progress}
-          isFavorite={favorite}
-        />
-      </div>
+      <PlayerControls
+        visible={showControls}
+        channelName={streamName}
+        onAction={handleAction}
+        paused={paused}
+        streamType={streamType}
+        currentTime={currentTime}
+        duration={duration}
+        progress={progress}
+        isFavorite={favorite}
+      />
 
       {/* SETTINGS */}
       <AudioSubtitleSelector

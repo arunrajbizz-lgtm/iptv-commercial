@@ -51,7 +51,8 @@ export default function SeriesInfoPage() {
     }
   }
 
-  const currentEpisodes = activeSeason ? (seasons[activeSeason] || []) : [];
+  const episodesArray = activeSeason ? (seasons[activeSeason] || []) : [];
+  const currentEpisodes = Array.isArray(episodesArray) ? episodesArray : Object.values(episodesArray);
 
   function getEpisodeProgress(episode) {
     const epId = episode.id || episode.episode_id;
