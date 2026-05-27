@@ -1,19 +1,19 @@
 import { navigateTo } from "../utils/navigation";
 import { useEffect, useMemo, useState, useRef, useCallback } from "react";
-import { KEYS } from "../utils/tizenRemote";
 import { getSeriesCategories, getSeries } from "../services/xtreamApi";
 import Sidebar from "../components/Sidebar";
 import focusManager from "../core/FocusManager";
 import navigationManager from "../core/NavigationManager";
+import { useFocus } from "../hooks/useFocus";
 
 export default function SeriesPage() {
   const [categories, setCategories] = useState([]);
   const [series, setSeries] = useState([]);
-  const [focusedCategory, setFocusedCategory] = useState(0);
-  const [focusedSeries, setFocusedSeries] = useState(0);
-  const [zone, setZone] = useState("content");
+  const [zone, setZone] = useState(focusManager.getZone());
+  const [localZone, setLocalZone] = useState("content"); // 'drawer' or 'content'
   const [showDrawer, setShowDrawer] = useState(false);
   const [catSearch, setCatSearch] = useState("");
+  const [focusedCategory, setFocusedCategory] = useState(0);
 
   const PAGE_SIZE = 30;
   const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE);
@@ -21,6 +21,12 @@ export default function SeriesPage() {
   const gridRef = useRef(null);
   const catListRef = useRef(null);
   const COLS = 6;
+
+  useEffect(() => {
+    return focusManager.subscribe(newZone => {
+      setZone(newZone);
+    });
+  }, []);
 
   useEffect(() => {
     focusManager.setZone("content");
@@ -34,7 +40,6 @@ export default function SeriesPage() {
       const data = await getSeriesCategories(iptv.host, iptv.username, iptv.password);
       setCategories(data || []);
       
-      // Restore last category
       const savedCatId = localStorage.getItem("series_focused_category_id");
       let startIdx = 0;
       if (savedCatId && data) {
@@ -53,21 +58,6 @@ export default function SeriesPage() {
       const iptv = JSON.parse(localStorage.getItem("iptv"));
       const data = await getSeries(iptv.host, iptv.username, iptv.password, categoryId);
       setSeries(data || []);
-      
-      // Restore focus to last selected series
-      const lastSelected = JSON.parse(localStorage.getItem("selected_series"));
-      if (lastSelected && data) {
-        const idx = data.findIndex(s => String(s.series_id) === String(lastSelected.series_id));
-        if (idx > -1) {
-          setFocusedSeries(idx);
-          if (idx >= visibleLimit) {
-            setVisibleLimit(idx + PAGE_SIZE);
-          }
-        }
-        else setFocusedSeries(0);
-      } else {
-        setFocusedSeries(0);
-      }
     } catch (error) { console.log(error); }
   }, []);
 
@@ -79,111 +69,53 @@ export default function SeriesPage() {
     );
   }, [categories, catSearch]);
 
-  useEffect(() => {
-    function handleKeys(event) {
-      const currentZone = focusManager.getZone();
-      if (currentZone === "sidebar") return;
+  const { focusIndex: catIdx, setFocusIndex: setCatIdx } = useFocus({
+    containerRef: catListRef,
+    columnCount: 1,
+    itemCount: filteredCategories.length,
+    isActive: zone === "content" && localZone === "drawer",
+    onEnter: (index) => {
+      const selectedCat = filteredCategories[index];
+      if (selectedCat) {
+        const realIndex = categories.findIndex(c => c.category_id === selectedCat.category_id);
+        setFocusedCategory(realIndex);
+        loadSeries(selectedCat.category_id);
+      }
+      setShowDrawer(false);
+      setLocalZone("content");
+    },
+    onRightEdge: () => {
+      setShowDrawer(false);
+      setLocalZone("content");
+    },
+    onLeftEdge: () => {
+      setShowDrawer(false);
+      focusManager.setZone("sidebar");
+    },
+    onBack: () => {
+      setShowDrawer(false);
+      setLocalZone("content");
+    },
+    initialIndex: focusedCategory
+  });
 
-      switch (event.keyCode) {
-        case KEYS.UP:
-          if (zone === "drawer") {
-             setFocusedCategory(prev => (prev > 0 ? prev - 1 : filteredCategories.length - 1));
-          } else {
-             if (focusedSeries >= COLS) setFocusedSeries(prev => prev - COLS);
-          }
-          break;
-
-        case KEYS.DOWN:
-          if (zone === "drawer") {
-             setFocusedCategory(prev => (prev < filteredCategories.length - 1 ? prev + 1 : 0));
-          } else {
-             if (focusedSeries + COLS < series.length) {
-                const nextIdx = focusedSeries + COLS;
-                setFocusedSeries(nextIdx);
-                if (nextIdx >= visibleLimit - COLS) {
-                   setVisibleLimit(prev => prev + PAGE_SIZE);
-                }
-             }
-          }
-          break;
-
-        case KEYS.LEFT:
-          if (zone === "content") {
-             if (focusedSeries % COLS === 0) {
-                setShowDrawer(true);
-                setZone("drawer");
-             } else {
-                setFocusedSeries(prev => prev - 1);
-             }
-          } else if (zone === "drawer") {
-             setShowDrawer(false);
-             focusManager.setZone("sidebar");
-          }
-          break;
-
-        case KEYS.RIGHT:
-          if (zone === "drawer") {
-             setShowDrawer(false);
-             setZone("content");
-             const selectedCat = filteredCategories[focusedCategory];
-             if (selectedCat) {
-                const realIndex = categories.findIndex(c => c.category_id === selectedCat.category_id);
-                setFocusedCategory(realIndex);
-                loadSeries(selectedCat.category_id);
-             }
-          } else {
-             if (focusedSeries % COLS < COLS - 1 && focusedSeries < series.length - 1) {
-                setFocusedSeries(prev => prev + 1);
-             }
-          }
-          break;
-
-        case KEYS.ENTER:
-          if (zone === "drawer") {
-             setShowDrawer(false);
-             setZone("content");
-             const selectedCat = filteredCategories[focusedCategory];
-             if (selectedCat) {
-                const realIndex = categories.findIndex(c => c.category_id === selectedCat.category_id);
-                setFocusedCategory(realIndex);
-                loadSeries(selectedCat.category_id);
-             }
-          } else {
-             openSeries(series[focusedSeries]);
-          }
-          break;
-
-        case KEYS.BACK:
-          if (showDrawer) {
-             setShowDrawer(false);
-             setZone("content");
-          } else {
-             navigateTo(navigationManager.back());
-          }
-          break;
-
-        default:
-          break;
+  const { focusIndex: seriesIdx } = useFocus({
+    containerRef: gridRef,
+    columnCount: COLS,
+    itemCount: Math.min(series.length, visibleLimit),
+    isActive: zone === "content" && localZone === "content",
+    onEnter: (index) => openSeries(series[index]),
+    onLeftEdge: () => {
+      setShowDrawer(true);
+      setLocalZone("drawer");
+    },
+    onBack: () => navigateTo(navigationManager.back()),
+    onFocusChange: (index) => {
+      if (index >= visibleLimit - COLS) {
+        setVisibleLimit(prev => prev + PAGE_SIZE);
       }
     }
-
-    document.addEventListener("keydown", handleKeys);
-    return () => document.removeEventListener("keydown", handleKeys);
-  }, [zone, focusedCategory, focusedSeries, categories, filteredCategories, series, showDrawer, visibleLimit, loadSeries]);
-
-  useEffect(() => {
-     if (zone === "content" && gridRef.current) {
-        const item = gridRef.current.children[focusedSeries];
-        if (item) item.scrollIntoView({ behavior: "smooth", block: "center" });
-     }
-  }, [focusedSeries, zone]);
-
-  useEffect(() => {
-    if (zone === "drawer" && catListRef.current) {
-       const item = catListRef.current.children[focusedCategory];
-       if (item) item.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-  }, [focusedCategory, zone]);
+  });
 
   function openSeries(item) {
     if (!item) return;
@@ -209,7 +141,7 @@ export default function SeriesPage() {
               value={catSearch}
               onChange={e => {
                 setCatSearch(e.target.value);
-                setFocusedCategory(0);
+                setCatIdx(0);
               }}
               style={{ width: "100%", background: "rgba(255,255,255,0.1)", color: "#fff", padding: "10px", border: "none", borderRadius: "4px" }}
             />
@@ -219,7 +151,8 @@ export default function SeriesPage() {
             {filteredCategories.map((cat, index) => (
               <div 
                 key={cat.category_id}
-                className={`drawer-item ${focusedCategory === index && zone === "drawer" ? "focused" : ""} ${categories[focusedCategory]?.category_id === cat.category_id ? "active" : ""}`}
+                data-focusable="true"
+                className={`drawer-item ${catIdx === index && localZone === "drawer" ? "focused" : ""} ${categories[focusedCategory]?.category_id === cat.category_id ? "active" : ""}`}
               >
                  {cat.category_name}
               </div>
@@ -236,7 +169,9 @@ export default function SeriesPage() {
             {series.slice(0, visibleLimit).map((item, index) => (
               <div 
                 key={`${item.series_id}-${index}`}
-                className={`content-card portrait-card ${focusedSeries === index && zone === "content" ? "focused" : ""}`}
+                data-focusable="true"
+                className={`content-card portrait-card ${seriesIdx === index && localZone === "content" ? "focused" : ""}`}
+                onClick={() => openSeries(item)}
               >
                  <img src={item.cover} alt="" className="card-img" />
                  <div className="card-info">

@@ -128,6 +128,7 @@ export function registerRemoteKeys() {
         "MediaStop",
         "MediaRewind",
         "MediaFastForward",
+        "MediaPlayPause",
         "ColorF0Red",
         "ColorF1Green",
         "ColorF2Yellow",
@@ -161,6 +162,6 @@ export function registerRemoteKeys() {
 
   // Debug Key Logger
   document.addEventListener("keydown", (e) => {
-    console.log("Remote Key Pressed:", e.keyCode, "Key:", e.key);
+    console.log("Remote Key Pressed:", e.keyCode, "Key Name:", e.key || "unknown");
   });
 }

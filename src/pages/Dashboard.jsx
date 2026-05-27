@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { navigateTo } from "../utils/navigation";
 import { KEYS } from "../utils/tizenRemote";
 import focusManager from "../core/FocusManager";
@@ -9,77 +9,57 @@ import ContinueWatching from "../components/ContinueWatching";
 import RecentChannels from "../components/RecentChannels";
 import VoiceSearchOverlay from "../components/VoiceSearchOverlay";
 import heroImage from "../assets/hero.png";
+import { useFocus } from "../hooks/useFocus";
 
 export default function Dashboard() {
-  const [contentRowIndex, setContentRowIndex] = useState(-1); // -1 for Hero
-  const [heroBtnIndex, setHeroBtnIndex] = useState(0);
+  const [zone, setZone] = useState(focusManager.getZone());
+  const [rowIndex, setRowIndex] = useState(-1); // -1 for Hero, 0, 1, 2 for rows
   const [showVoice, setShowVoice] = useState(false);
+  const heroRef = useRef(null);
 
   useEffect(() => {
-    focusManager.setZone("content");
-    setContentRowIndex(-1);
+    return focusManager.subscribe(newZone => {
+      setZone(newZone);
+    });
   }, []);
 
   useEffect(() => {
-    function handleKeys(event) {
-      const zone = focusManager.getZone();
-      if (zone !== "content") return;
+    focusManager.setZone("content");
+    setRowIndex(-1);
+  }, []);
 
-      switch (event.keyCode) {
-        case KEYS.LEFT:
-          focusManager.setZone("sidebar");
-          break;
-
-        case KEYS.UP:
-          if (contentRowIndex > -1) {
-            setContentRowIndex(prev => prev - 1);
-          }
-          break;
-
-        case KEYS.DOWN:
-          if (contentRowIndex < 2) {
-            setContentRowIndex(prev => prev + 1);
-          }
-          break;
-
-        case KEYS.RIGHT:
-          if (contentRowIndex === -1) {
-             setHeroBtnIndex(1);
-          }
-          break;
-
-        case KEYS.ENTER:
-          if (contentRowIndex === -1) {
-            if (heroBtnIndex === 0) {
-              navigationManager.push("/dashboard");
-              navigateTo("/live");
-            }
-            else navigateTo("/search");
-          }
-          break;
-
-        case KEYS.BLUE:
-          setShowVoice(true);
-          focusManager.setZone("modal");
-          break;
-
-        case KEYS.BACK:
-          // In a real TV app, back on home might show an exit dialog
-          break;
-
-        default:
-          break;
+  const { focusIndex: heroBtnIndex } = useFocus({
+    containerRef: heroRef,
+    columnCount: 2,
+    itemCount: 2,
+    isActive: zone === "content" && rowIndex === -1,
+    onEnter: (index) => {
+      if (index === 0) {
+        navigationManager.push("/dashboard");
+        navigateTo("/live");
+      } else {
+        navigateTo("/search");
       }
-    }
-
-    document.addEventListener("keydown", handleKeys);
-    return () => document.removeEventListener("keydown", handleKeys);
-  }, [contentRowIndex, heroBtnIndex]);
+    },
+    onLeftEdge: () => focusManager.setZone("sidebar"),
+    onBottomEdge: () => setRowIndex(0)
+  });
 
   const handleVoiceResult = (text) => {
     localStorage.setItem("voice_search", text);
     navigateTo("/search");
   };
+
+  useEffect(() => {
+    function handleSpecialKeys(e) {
+      if (e.keyCode === KEYS.BLUE) {
+        setShowVoice(true);
+        focusManager.setZone("modal");
+      }
+    }
+    document.addEventListener("keydown", handleSpecialKeys);
+    return () => document.removeEventListener("keydown", handleSpecialKeys);
+  }, []);
 
   return (
     <div className="app-container">
@@ -87,7 +67,7 @@ export default function Dashboard() {
 
       <main className="app-main">
         {/* HERO SECTION */}
-        <section className="hero-banner">
+        <section className="hero-banner" ref={heroRef}>
           <img src={heroImage} alt="Hero" className="hero-image" />
           <div className="hero-overlay" />
           
@@ -110,13 +90,15 @@ export default function Dashboard() {
             
             <div className="hero-btns">
               <button 
-                className={`btn-primary ${contentRowIndex === -1 && heroBtnIndex === 0 ? "focused" : ""}`}
+                data-focusable="true"
+                className={`btn-primary ${zone === "content" && rowIndex === -1 && heroBtnIndex === 0 ? "focused" : ""}`}
                 onClick={() => navigateTo("/live")}
               >
                 <span>▶</span> Play
               </button>
               <button 
-                className={`btn-secondary ${contentRowIndex === -1 && heroBtnIndex === 1 ? "focused" : ""}`}
+                data-focusable="true"
+                className={`btn-secondary ${zone === "content" && rowIndex === -1 && heroBtnIndex === 1 ? "focused" : ""}`}
                 onClick={() => navigateTo("/search")}
               >
                 <span>ⓘ</span> More Info
@@ -127,19 +109,30 @@ export default function Dashboard() {
 
         {/* CONTENT ROWS */}
         <div className="content-rows">
-          <div className={`row-container ${contentRowIndex === 0 ? "focused" : ""}`}>
+          <div className={`row-container ${rowIndex === 0 ? "focused" : ""}`}>
             <h2 className="row-title">Recommended for You</h2>
-            <RecommendedRow isFocused={contentRowIndex === 0} />
+            <RecommendedRow 
+              isFocused={zone === "content" && rowIndex === 0} 
+              onTopEdge={() => setRowIndex(-1)}
+              onBottomEdge={() => setRowIndex(1)}
+            />
           </div>
 
-          <div className={`row-container ${contentRowIndex === 1 ? "focused" : ""}`}>
+          <div className={`row-container ${rowIndex === 1 ? "focused" : ""}`}>
             <h2 className="row-title">Continue Watching</h2>
-            <ContinueWatching isFocused={contentRowIndex === 1} />
+            <ContinueWatching 
+              isFocused={zone === "content" && rowIndex === 1} 
+              onTopEdge={() => setRowIndex(0)}
+              onBottomEdge={() => setRowIndex(2)}
+            />
           </div>
 
-          <div className={`row-container ${contentRowIndex === 2 ? "focused" : ""}`}>
+          <div className={`row-container ${rowIndex === 2 ? "focused" : ""}`}>
             <h2 className="row-title">Recently Played Channels</h2>
-            <RecentChannels isFocused={contentRowIndex === 2} />
+            <RecentChannels 
+              isFocused={zone === "content" && rowIndex === 2} 
+              onTopEdge={() => setRowIndex(1)}
+            />
           </div>
         </div>
       </main>

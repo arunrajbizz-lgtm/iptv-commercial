@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
-import { KEYS } from "../utils/tizenRemote";
+import { useEffect, useState, useRef } from "react";
 import focusManager from "../core/FocusManager";
 import { navigateTo } from "../utils/navigation";
+import { useFocus } from "../hooks/useFocus";
 
 export default function Sidebar({ active }) {
   const items = [
@@ -14,67 +14,34 @@ export default function Sidebar({ active }) {
     { id: "SETTINGS", label: "Settings", icon: "⚙️", path: "/settings" }
   ];
 
-  const [focused, setFocused] = useState(0);
-  const [expanded, setExpanded] = useState(false);
+  const [zone, setZone] = useState(focusManager.getZone());
+  const sidebarRef = useRef(null);
 
   useEffect(() => {
-    const saved = focusManager.getSidebar();
-    setFocused(saved);
+    return focusManager.subscribe(newZone => {
+      setZone(newZone);
+    });
   }, []);
 
-  useEffect(() => {
-    function handleKeys(event) {
-      if (focusManager.getZone() !== "sidebar") return;
-
-      switch (event.keyCode) {
-        case KEYS.UP:
-          if (focused > 0) {
-            const next = focused - 1;
-            setFocused(next);
-            focusManager.setSidebar(next);
-          }
-          break;
-
-        case KEYS.DOWN:
-          if (focused < items.length - 1) {
-            const next = focused + 1;
-            setFocused(next);
-            focusManager.setSidebar(next);
-          }
-          break;
-
-        case KEYS.RIGHT:
-          setExpanded(false);
-          focusManager.setZone("content");
-          break;
-
-        case KEYS.ENTER:
-          const item = items[focused];
-          navigateTo(item.path);
-          break;
-
-        case KEYS.BACK:
-          setExpanded(false);
-          focusManager.setZone("content");
-          break;
-
-        default:
-          break;
-      }
+  const { focusIndex, setFocusIndex } = useFocus({
+    containerRef: sidebarRef,
+    columnCount: 1,
+    itemCount: items.length,
+    isActive: zone === "sidebar",
+    initialIndex: focusManager.getSidebar(),
+    onEnter: (index) => {
+      const item = items[index];
+      navigateTo(item.path);
+    },
+    onLeftEdge: () => {
+      // Stay in sidebar or do nothing
+    },
+    onFocusChange: (index) => {
+      focusManager.setSidebar(index);
     }
+  });
 
-    document.addEventListener("keydown", handleKeys);
-    return () => document.removeEventListener("keydown", handleKeys);
-  }, [focused]);
-
-  // EXPAND ON ZONE
-  useEffect(() => {
-    const interval = setInterval(() => {
-       const zone = focusManager.getZone();
-       setExpanded(zone === "sidebar");
-    }, 100);
-    return () => clearInterval(interval);
-  }, []);
+  const expanded = zone === "sidebar";
 
   return (
     <aside className={`app-sidebar ${expanded ? "expanded" : ""}`}>
@@ -82,11 +49,12 @@ export default function Sidebar({ active }) {
         {expanded ? "STREAMVAULT" : "S"}
       </div>
 
-      <nav className="sidebar-nav">
+      <nav className="sidebar-nav" ref={sidebarRef}>
         {items.map((item, index) => (
           <div
             key={item.id}
-            className={`nav-item ${focused === index && expanded ? "focused" : ""} ${active === item.id ? "active" : ""}`}
+            data-focusable="true"
+            className={`nav-item ${focusIndex === index && expanded ? "focused" : ""} ${active === item.id ? "active" : ""}`}
             onClick={() => navigateTo(item.path)}
           >
             <span className="nav-item-icon">{item.icon}</span>

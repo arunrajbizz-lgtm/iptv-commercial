@@ -1,8 +1,8 @@
 import { navigateTo } from "../utils/navigation";
-import { useEffect, useState } from "react";
-import { KEYS } from "../utils/tizenRemote";
+import { useEffect, useState, useRef } from "react";
 import Sidebar from "../components/Sidebar";
 import focusManager from "../core/FocusManager";
+import { useFocus } from "../hooks/useFocus";
 
 export default function SettingsPage() {
   const settings = [
@@ -14,13 +14,20 @@ export default function SettingsPage() {
     { id: "logout", title: "Logout", type: "action" }
   ];
 
-  const [focused, setFocused] = useState(0);
+  const [zone, setZone] = useState(focusManager.getZone());
   const [config, setConfig] = useState({
     autoplay: true,
     multiview: true,
     parental: false,
     streamformat: "m3u8"
   });
+  const settingsRef = useRef(null);
+
+  useEffect(() => {
+    return focusManager.subscribe(newZone => {
+      setZone(newZone);
+    });
+  }, []);
 
   useEffect(() => {
     focusManager.setZone("content");
@@ -28,50 +35,28 @@ export default function SettingsPage() {
     if (saved) setConfig(saved);
   }, []);
 
-  useEffect(() => {
-    const el = document.querySelector(`[data-setting-index="${focused}"]`);
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [focused]);
+  const { focusIndex: focused } = useFocus({
+    containerRef: settingsRef,
+    columnCount: 1,
+    itemCount: settings.length,
+    isActive: zone === "content",
+    onEnter: (index) => activateSetting(settings[index]),
+    onLeftEdge: () => {
+      if (settings[focused].type === "option") changeOption(settings[focused], -1);
+      else focusManager.setZone("sidebar");
+    },
+    onRightEdge: () => {
+      if (settings[focused].type === "option") changeOption(settings[focused], 1);
+    },
+    onBack: () => navigateTo("/dashboard")
+  });
 
   function saveSettings(updated) {
     setConfig(updated);
     localStorage.setItem("settings", JSON.stringify(updated));
   }
 
-  useEffect(() => {
-    function handleKeys(event) {
-      if (focusManager.getZone() === "sidebar") return;
-
-      switch (event.keyCode) {
-        case KEYS.UP:
-          if (focused > 0) setFocused(prev => prev - 1);
-          break;
-        case KEYS.DOWN:
-          if (focused < settings.length - 1) setFocused(prev => prev + 1);
-          break;
-        case KEYS.LEFT:
-          if (settings[focused].type === "option") changeOption(-1);
-          else focusManager.setZone("sidebar");
-          break;
-        case KEYS.RIGHT:
-          if (settings[focused].type === "option") changeOption(1);
-          break;
-        case KEYS.ENTER:
-          activateSetting();
-          break;
-        case KEYS.BACK:
-          navigateTo("/dashboard");
-          break;
-        default:
-          break;
-      }
-    }
-    document.addEventListener("keydown", handleKeys);
-    return () => document.removeEventListener("keydown", handleKeys);
-  }, [focused, config]);
-
-  function changeOption(direction) {
-    const item = settings[focused];
+  function changeOption(item, direction) {
     const current = config[item.id];
     const currentIndex = item.options.indexOf(current);
     let next = currentIndex + direction;
@@ -80,8 +65,7 @@ export default function SettingsPage() {
     saveSettings({ ...config, [item.id]: item.options[next] });
   }
 
-  function activateSetting() {
-    const item = settings[focused];
+  function activateSetting(item) {
     if (item.type === "toggle") {
       saveSettings({ ...config, [item.id]: !config[item.id] });
     } else if (item.id === "clearcache") {
@@ -101,13 +85,13 @@ export default function SettingsPage() {
       <main className="app-main browse-container">
         <h1 className="hero-title" style={{ fontSize: "60px", marginBottom: "50px" }}>Settings</h1>
 
-        <div className="channel-list-v">
+        <div className="channel-list-v" ref={settingsRef}>
           {settings.map((item, index) => (
             <div
               key={item.id}
-              data-setting-index={index}
-              className={`channel-item ${focused === index ? "focused" : ""}`}
-              onClick={activateSetting}
+              data-focusable="true"
+              className={`channel-item ${focused === index && zone === "content" ? "focused" : ""}`}
+              onClick={() => activateSetting(item)}
             >
               <div className="channel-name" style={{ flex: 1 }}>{item.title}</div>
               <div style={{ fontSize: "26px", fontWeight: "800", color: "var(--primary)" }}>

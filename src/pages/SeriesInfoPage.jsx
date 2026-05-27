@@ -1,29 +1,34 @@
 import { navigateTo } from "../utils/navigation";
-import { useEffect, useState } from "react";
-import { KEYS } from "../utils/tizenRemote";
+import { useEffect, useState, useRef } from "react";
 import { getSeriesInfo } from "../services/xtreamApi";
 import focusManager from "../core/FocusManager";
 import { getResumePosition } from "../utils/ResumeManager";
+import Sidebar from "../components/Sidebar";
+import { useFocus } from "../hooks/useFocus";
+import FavoriteButton from "../components/FavoriteButton";
 
 export default function SeriesInfoPage() {
   const [series, setSeries] = useState(null);
   const [seasons, setSeasons] = useState({});
   const [seasonNumbers, setSeasonNumbers] = useState([]);
   const [activeSeason, setActiveSeason] = useState(null);
-  const [focusedEpisode, setFocusedEpisode] = useState(0);
-  const [focusedSeason, setFocusedSeason] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [zone, setZone] = useState("content"); // 'seasons' or 'content'
+  const [zone, setZone] = useState(focusManager.getZone());
+  const [localZone, setLocalZone] = useState("content"); // 'seasons' or 'content'
+  
+  const seasonRef = useRef(null);
+  const episodeRef = useRef(null);
+
+  useEffect(() => {
+    return focusManager.subscribe(newZone => {
+      setZone(newZone);
+    });
+  }, []);
 
   useEffect(() => {
     focusManager.setZone("content");
     loadSeriesData();
   }, []);
-
-  useEffect(() => {
-    const el = document.querySelector(`[data-episode-index="${focusedEpisode}"]`);
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [focusedEpisode]);
 
   async function loadSeriesData() {
     try {
@@ -64,74 +69,38 @@ export default function SeriesInfoPage() {
     return 0;
   }
 
-  useEffect(() => {
-    function handleKeys(event) {
-      if (!series) return;
+  const { focusIndex: seasonIdx } = useFocus({
+    containerRef: seasonRef,
+    columnCount: seasonNumbers.length,
+    itemCount: seasonNumbers.length,
+    isActive: zone === "content" && localZone === "seasons",
+    onEnter: (index) => {
+      setActiveSeason(seasonNumbers[index]);
+      setLocalZone("content");
+    },
+    onBottomEdge: () => setLocalZone("content"),
+    onLeftEdge: () => focusManager.setZone("sidebar"),
+    onBack: () => navigateTo("/series")
+  });
 
-      switch (event.keyCode) {
-        case KEYS.UP:
-          if (zone === "content") {
-            if (focusedEpisode > 0) {
-              setFocusedEpisode(prev => prev - 1);
-            } else {
-              setZone("seasons");
-            }
-          }
-          break;
+  const { focusIndex: episodeIdx } = useFocus({
+    containerRef: episodeRef,
+    columnCount: 1,
+    itemCount: currentEpisodes.length,
+    isActive: zone === "content" && localZone === "content",
+    onEnter: (index) => openEpisode(currentEpisodes[index]),
+    onTopEdge: () => setLocalZone("seasons"),
+    onLeftEdge: () => focusManager.setZone("sidebar"),
+    onBack: () => setLocalZone("seasons")
+  });
 
-        case KEYS.DOWN:
-          if (zone === "seasons") {
-            setZone("content");
-          } else {
-            if (focusedEpisode < currentEpisodes.length - 1) {
-              setFocusedEpisode(prev => prev + 1);
-            }
-          }
-          break;
-
-        case KEYS.LEFT:
-          if (zone === "seasons") {
-            if (focusedSeason > 0) setFocusedSeason(prev => prev - 1);
-          }
-          break;
-
-        case KEYS.RIGHT:
-          if (zone === "seasons") {
-            if (focusedSeason < seasonNumbers.length - 1) setFocusedSeason(prev => prev + 1);
-          }
-          break;
-
-        case KEYS.ENTER:
-          if (zone === "seasons") {
-            setActiveSeason(seasonNumbers[focusedSeason]);
-            setFocusedEpisode(0);
-            setZone("content");
-          } else {
-            openEpisode();
-          }
-          break;
-
-        case KEYS.BACK:
-          navigateTo("/series");
-          break;
-          
-        default:
-          break;
-      }
-    }
-    document.addEventListener("keydown", handleKeys);
-    return () => document.removeEventListener("keydown", handleKeys);
-  }, [focusedEpisode, focusedSeason, zone, activeSeason, currentEpisodes, seasonNumbers, series]);
-
-  function openEpisode() {
-    const episode = currentEpisodes[focusedEpisode];
+  function openEpisode(episode) {
     if (!episode || !series) return;
-    
     const epId = episode.id || episode.episode_id;
     if (!epId) return;
 
     localStorage.setItem("stream_id", epId);
-    localStorage.setItem("stream_name", `${series.name} - S${activeSeason} E${episode.episode_num || focusedEpisode + 1}: ${episode.title || "Episode"}`);
+    localStorage.setItem("stream_name", `${series.name} - S${activeSeason} E${episode.episode_num || episodeIdx + 1}: ${episode.title || "Episode"}`);
     localStorage.setItem("stream_type", "series");
     localStorage.setItem("stream_icon", episode.info?.movie_image || series.cover || "");
     localStorage.setItem("container_extension", episode.container_extension || "mp4");
@@ -142,81 +111,77 @@ export default function SeriesInfoPage() {
   if (!series) return null;
 
   return (
-    <div className="app-main fade-in" style={{ background: "var(--bg-black)" }}>
-      {/* HERO SECTION */}
-      <section className="hero-banner" style={{ height: "60vh" }}>
-        <img src={series.cover || series.backdrop_path?.[0]} alt="" className="hero-image" style={{ opacity: 0.4 }} />
-        <div className="hero-overlay" />
-        <div className="hero-content">
-          <h1 className="hero-title">{series.name}</h1>
-          <div className="hero-meta">
-            <span className="match">{series.rating ? `${series.rating}/10` : "98% Match"}</span>
-            <span>{series.releaseDate || series.last_modified}</span>
-            <span className="badge">{series.age || "18+"}</span>
-            <span className="badge">HD</span>
-          </div>
-          <p className="hero-desc">{series.plot || "No description available for this series."}</p>
-        </div>
-      </section>
-
-      <div className="browse-container" style={{ paddingTop: "20px" }}>
-        {/* SEASON SELECTOR */}
-        <div className="seasons-row" style={{ display: "flex", gap: "20px", marginBottom: "30px", overflowX: "auto" }}>
-          {seasonNumbers.map((num, index) => (
-            <div
-              key={num}
-              className={`season-tab ${activeSeason === num ? "active" : ""} ${zone === "seasons" && focusedSeason === index ? "focused" : ""}`}
-              style={{
-                padding: "15px 30px",
-                borderRadius: "10px",
-                background: activeSeason === num ? "var(--primary)" : "rgba(255,255,255,0.1)",
-                color: activeSeason === num ? "black" : "white",
-                fontWeight: "bold",
-                fontSize: "22px",
-                border: zone === "seasons" && focusedSeason === index ? "4px solid white" : "4px solid transparent",
-                transition: "all 0.2s ease"
-              }}
-            >
-              Season {num}
-            </div>
-          ))}
-        </div>
-
-        {/* EPISODES LIST */}
-        <h2 className="row-title">Season {activeSeason} - Episodes ({currentEpisodes.length})</h2>
-        <div className="channel-list-v">
-          {currentEpisodes.map((ep, index) => {
-            const progress = getEpisodeProgress(ep);
-            return (
-              <div
-                key={`${ep.id}-${index}`}
-                data-episode-index={index}
-                className={`channel-item ${zone === "content" && focusedEpisode === index ? "focused" : ""}`}
-                onClick={openEpisode}
-                style={{ height: "140px", position: "relative" }}
-              >
-                <div style={{ fontSize: "50px", fontWeight: "900", opacity: 0.2, minWidth: "100px", textAlign: "center" }}>
-                  {ep.episode_num || index + 1}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: "28px", fontWeight: "700", marginBottom: "5px" }}>
-                    {ep.title}
-                  </div>
-                  <div style={{ fontSize: "20px", color: "var(--text-dim)", maxWidth: "800px" }}>
-                    {ep.info?.plot || ep.plot || "No description available."}
-                  </div>
-                  {progress > 0 && (
-                    <div style={{ width: "200px", height: "4px", background: "rgba(255,255,255,0.2)", marginTop: "10px", borderRadius: "2px", overflow: "hidden" }}>
-                      <div style={{ width: `${progress}%`, height: "100%", background: "var(--primary)" }} />
-                    </div>
-                  )}
-                </div>
-                {zone === "content" && focusedEpisode === index && <div style={{ fontSize: "40px" }}>▶</div>}
+    <div className="app-container">
+      <Sidebar active="SERIES" />
+      <main className="app-main fade-in info-page">
+        {/* HERO SECTION */}
+        <section className="hero-banner info-hero small">
+          <img src={series.cover || series.backdrop_path?.[0]} alt="" className="hero-image" />
+          <div className="hero-overlay" />
+          <div className="hero-content">
+            <h1 className="hero-title">{series.name}</h1>
+            <div className="hero-meta">
+              <span className="match">{series.rating ? `${series.rating}/10` : "98% Match"}</span>
+              <span>{series.releaseDate || series.last_modified}</span>
+              <span className="badge">{series.age || "18+"}</span>
+              <span className="badge">TV SERIES</span>
+              <div style={{ marginLeft: "20px" }}>
+                 <FavoriteButton item={{ ...series, type: "series" }} />
               </div>
-            );
-          })}
+            </div>
+            <p className="hero-desc">{series.plot || "No description available for this series."}</p>
+          </div>
+        </section>
+
+        <div className="browse-container" style={{ paddingTop: "0" }}>
+          {/* SEASON SELECTOR */}
+          <div className="seasons-row" ref={seasonRef}>
+            {seasonNumbers.map((num, index) => (
+              <div
+                key={num}
+                data-focusable="true"
+                className={`season-tab ${activeSeason === num ? "active" : ""} ${zone === "content" && localZone === "seasons" && seasonIdx === index ? "focused" : ""}`}
+              >
+                Season {num}
+              </div>
+            ))}
+          </div>
+
+          {/* EPISODES LIST */}
+          <h2 className="row-title">Season {activeSeason} Episodes</h2>
+          <div className="channel-list-v" ref={episodeRef}>
+            {currentEpisodes.map((ep, index) => {
+              const progress = getEpisodeProgress(ep);
+              return (
+                <div
+                  key={`${ep.id}-${index}`}
+                  data-focusable="true"
+                  className={`channel-item episode-item ${zone === "content" && localZone === "content" && episodeIdx === index ? "focused" : ""}`}
+                  onClick={() => openEpisode(ep)}
+                >
+                  <div className="episode-num">
+                    {ep.episode_num || index + 1}
+                  </div>
+                  <div className="channel-main">
+                    <div className="episode-title">
+                      {ep.title}
+                    </div>
+                    <div className="episode-desc">
+                      {ep.info?.plot || ep.plot || "No description available."}
+                    </div>
+                    {progress > 0 && (
+                      <div className="episode-progress-container">
+                        <div className="episode-progress-fill" style={{ width: `${progress}%` }} />
+                      </div>
+                    )}
+                  </div>
+                  {zone === "content" && localZone === "content" && episodeIdx === index && <div className="play-icon">▶</div>}
+                </div>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

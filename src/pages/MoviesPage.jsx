@@ -1,19 +1,19 @@
 import { navigateTo } from "../utils/navigation";
 import { useEffect, useMemo, useState, useRef, useCallback } from "react";
-import { KEYS } from "../utils/tizenRemote";
 import { getMovieCategories, getMovies } from "../services/xtreamApi";
 import Sidebar from "../components/Sidebar";
 import focusManager from "../core/FocusManager";
 import navigationManager from "../core/NavigationManager";
+import { useFocus } from "../hooks/useFocus";
 
 export default function MoviesPage() {
   const [categories, setCategories] = useState([]);
   const [movies, setMovies] = useState([]);
-  const [focusedCategory, setFocusedCategory] = useState(0);
-  const [focusedMovie, setFocusedMovie] = useState(0);
-  const [zone, setZone] = useState("content");
+  const [zone, setZone] = useState(focusManager.getZone());
+  const [localZone, setLocalZone] = useState("content"); // 'drawer' or 'content'
   const [showDrawer, setShowDrawer] = useState(false);
   const [catSearch, setCatSearch] = useState("");
+  const [focusedCategory, setFocusedCategory] = useState(0);
 
   const PAGE_SIZE = 30;
   const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE);
@@ -21,6 +21,12 @@ export default function MoviesPage() {
   const gridRef = useRef(null);
   const catListRef = useRef(null);
   const COLS = 6;
+
+  useEffect(() => {
+    return focusManager.subscribe(newZone => {
+      setZone(newZone);
+    });
+  }, []);
 
   useEffect(() => {
     focusManager.setZone("content");
@@ -34,7 +40,6 @@ export default function MoviesPage() {
       const data = await getMovieCategories(iptv.host, iptv.username, iptv.password);
       setCategories(data || []);
       
-      // Restore last category
       const savedCatId = localStorage.getItem("movie_focused_category_id");
       let startIdx = 0;
       if (savedCatId && data) {
@@ -53,24 +58,8 @@ export default function MoviesPage() {
       const iptv = JSON.parse(localStorage.getItem("iptv"));
       const data = await getMovies(iptv.host, iptv.username, iptv.password, categoryId);
       setMovies(data || []);
-      
-      // Restore focus to last played movie if in this category
-      const currentStreamId = localStorage.getItem("stream_id");
-      if (currentStreamId && data) {
-        const movieIdx = data.findIndex(m => String(m.stream_id) === String(currentStreamId));
-        if (movieIdx > -1) {
-          setFocusedMovie(movieIdx);
-          // Ensure the restored item is actually rendered
-          if (movieIdx >= visibleLimit) {
-            setVisibleLimit(movieIdx + PAGE_SIZE);
-          }
-        }
-        else setFocusedMovie(0);
-      } else {
-        setFocusedMovie(0);
-      }
     } catch (error) { console.log(error); }
-  }, [visibleLimit]);
+  }, []);
 
   const filteredCategories = useMemo(() => {
     if (!catSearch) return categories;
@@ -79,111 +68,53 @@ export default function MoviesPage() {
     );
   }, [categories, catSearch]);
 
-  useEffect(() => {
-    function handleKeys(event) {
-      const currentZone = focusManager.getZone();
-      if (currentZone === "sidebar") return;
+  const { focusIndex: catIdx, setFocusIndex: setCatIdx } = useFocus({
+    containerRef: catListRef,
+    columnCount: 1,
+    itemCount: filteredCategories.length,
+    isActive: zone === "content" && localZone === "drawer",
+    onEnter: (index) => {
+      const selectedCat = filteredCategories[index];
+      if (selectedCat) {
+        const realIndex = categories.findIndex(c => c.category_id === selectedCat.category_id);
+        setFocusedCategory(realIndex);
+        loadMovies(selectedCat.category_id);
+      }
+      setShowDrawer(false);
+      setLocalZone("content");
+    },
+    onRightEdge: () => {
+      setShowDrawer(false);
+      setLocalZone("content");
+    },
+    onLeftEdge: () => {
+      setShowDrawer(false);
+      focusManager.setZone("sidebar");
+    },
+    onBack: () => {
+      setShowDrawer(false);
+      setLocalZone("content");
+    },
+    initialIndex: focusedCategory
+  });
 
-      switch (event.keyCode) {
-        case KEYS.UP:
-          if (zone === "drawer") {
-             setFocusedCategory(prev => (prev > 0 ? prev - 1 : filteredCategories.length - 1));
-          } else {
-             if (focusedMovie >= COLS) setFocusedMovie(prev => prev - COLS);
-          }
-          break;
-
-        case KEYS.DOWN:
-          if (zone === "drawer") {
-             setFocusedCategory(prev => (prev < filteredCategories.length - 1 ? prev + 1 : 0));
-          } else {
-             if (focusedMovie + COLS < movies.length) {
-                const nextIdx = focusedMovie + COLS;
-                setFocusedMovie(nextIdx);
-                if (nextIdx >= visibleLimit - COLS) {
-                   setVisibleLimit(prev => prev + PAGE_SIZE);
-                }
-             }
-          }
-          break;
-
-        case KEYS.LEFT:
-          if (zone === "content") {
-             if (focusedMovie % COLS === 0) {
-                setShowDrawer(true);
-                setZone("drawer");
-             } else {
-                setFocusedMovie(prev => prev - 1);
-             }
-          } else if (zone === "drawer") {
-             setShowDrawer(false);
-             focusManager.setZone("sidebar");
-          }
-          break;
-
-        case KEYS.RIGHT:
-          if (zone === "drawer") {
-             setShowDrawer(false);
-             setZone("content");
-             const selectedCat = filteredCategories[focusedCategory];
-             if (selectedCat) {
-                const realIndex = categories.findIndex(c => c.category_id === selectedCat.category_id);
-                setFocusedCategory(realIndex);
-                loadMovies(selectedCat.category_id);
-             }
-          } else {
-             if (focusedMovie % COLS < COLS - 1 && focusedMovie < movies.length - 1) {
-                setFocusedMovie(prev => prev + 1);
-             }
-          }
-          break;
-
-        case KEYS.ENTER:
-          if (zone === "drawer") {
-             setShowDrawer(false);
-             setZone("content");
-             const selectedCat = filteredCategories[focusedCategory];
-             if (selectedCat) {
-                const realIndex = categories.findIndex(c => c.category_id === selectedCat.category_id);
-                setFocusedCategory(realIndex);
-                loadMovies(selectedCat.category_id);
-             }
-          } else {
-             openMovie(movies[focusedMovie]);
-          }
-          break;
-
-        case KEYS.BACK:
-          if (showDrawer) {
-             setShowDrawer(false);
-             setZone("content");
-          } else {
-             navigateTo(navigationManager.back());
-          }
-          break;
-
-        default:
-          break;
+  const { focusIndex: movieIdx } = useFocus({
+    containerRef: gridRef,
+    columnCount: COLS,
+    itemCount: Math.min(movies.length, visibleLimit),
+    isActive: zone === "content" && localZone === "content",
+    onEnter: (index) => openMovie(movies[index]),
+    onLeftEdge: () => {
+      setShowDrawer(true);
+      setLocalZone("drawer");
+    },
+    onBack: () => navigateTo(navigationManager.back()),
+    onFocusChange: (index) => {
+      if (index >= visibleLimit - COLS) {
+        setVisibleLimit(prev => prev + PAGE_SIZE);
       }
     }
-
-    document.addEventListener("keydown", handleKeys);
-    return () => document.removeEventListener("keydown", handleKeys);
-  }, [zone, focusedCategory, focusedMovie, categories, filteredCategories, movies, showDrawer, visibleLimit, loadMovies]);
-
-  useEffect(() => {
-     if (zone === "content" && gridRef.current) {
-        const item = gridRef.current.children[focusedMovie];
-        if (item) item.scrollIntoView({ behavior: "smooth", block: "center" });
-     }
-  }, [focusedMovie, zone]);
-
-  useEffect(() => {
-    if (zone === "drawer" && catListRef.current) {
-       const item = catListRef.current.children[focusedCategory];
-       if (item) item.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-  }, [focusedCategory, zone]);
+  });
 
   function openMovie(movie) {
     if (!movie) return;
@@ -209,7 +140,7 @@ export default function MoviesPage() {
               value={catSearch}
               onChange={e => {
                 setCatSearch(e.target.value);
-                setFocusedCategory(0);
+                setCatIdx(0);
               }}
               style={{ width: "100%", background: "rgba(255,255,255,0.1)", color: "#fff", padding: "10px", border: "none", borderRadius: "4px" }}
             />
@@ -219,7 +150,8 @@ export default function MoviesPage() {
             {filteredCategories.map((cat, index) => (
               <div 
                 key={cat.category_id}
-                className={`drawer-item ${focusedCategory === index && zone === "drawer" ? "focused" : ""} ${categories[focusedCategory]?.category_id === cat.category_id ? "active" : ""}`}
+                data-focusable="true"
+                className={`drawer-item ${catIdx === index && localZone === "drawer" ? "focused" : ""} ${categories[focusedCategory]?.category_id === cat.category_id ? "active" : ""}`}
               >
                  {cat.category_name}
               </div>
@@ -236,7 +168,9 @@ export default function MoviesPage() {
             {movies.slice(0, visibleLimit).map((movie, index) => (
               <div 
                 key={`${movie.stream_id}-${index}`}
-                className={`content-card portrait-card ${focusedMovie === index && zone === "content" ? "focused" : ""}`}
+                data-focusable="true"
+                className={`content-card portrait-card ${movieIdx === index && localZone === "content" ? "focused" : ""}`}
+                onClick={() => openMovie(movie)}
               >
                  <img src={movie.stream_icon} alt="" className="card-img" />
                  <div className="card-info">

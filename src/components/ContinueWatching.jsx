@@ -1,57 +1,26 @@
 import { navigateTo } from "../utils/navigation";
 import { useEffect, useState, useRef } from "react";
-import { KEYS } from "../utils/tizenRemote";
+import { useFocus } from "../hooks/useFocus";
 import focusManager from "../core/FocusManager";
 
-export default function ContinueWatching({ isFocused }) {
+export default function ContinueWatching({ isFocused, onTopEdge, onBottomEdge }) {
   const [items, setItems] = useState([]);
-  const [focusedIndex, setFocusedIndex] = useState(0);
   const scrollRef = useRef(null);
 
   useEffect(() => {
     loadItems();
   }, []);
 
-  useEffect(() => {
-    if (!isFocused) return;
-
-    function handleKeys(event) {
-      switch (event.keyCode) {
-        case KEYS.LEFT:
-          if (focusedIndex > 0) {
-            setFocusedIndex(prev => prev - 1);
-          } else {
-            focusManager.setZone("sidebar");
-          }
-          break;
-
-        case KEYS.RIGHT:
-          if (focusedIndex < items.length - 1) {
-            setFocusedIndex(prev => prev + 1);
-          }
-          break;
-
-        case KEYS.ENTER:
-          openItem(items[focusedIndex]);
-          break;
-
-        default:
-          break;
-      }
-    }
-
-    document.addEventListener("keydown", handleKeys);
-    return () => document.removeEventListener("keydown", handleKeys);
-  }, [isFocused, focusedIndex, items]);
-
-  useEffect(() => {
-    if (isFocused && scrollRef.current) {
-      const card = scrollRef.current.children[focusedIndex];
-      if (card) {
-        card.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
-      }
-    }
-  }, [focusedIndex, isFocused]);
+  const { focusIndex } = useFocus({
+    containerRef: scrollRef,
+    columnCount: items.length,
+    itemCount: items.length,
+    isActive: isFocused,
+    onEnter: (index) => openItem(items[index]),
+    onLeftEdge: () => focusManager.setZone("sidebar"),
+    onTopEdge,
+    onBottomEdge
+  });
 
   function loadItems() {
     try {
@@ -79,7 +48,8 @@ export default function ContinueWatching({ isFocused }) {
       {items.map((item, index) => (
         <div
           key={`${item.stream_id}-${index}`}
-          className={`content-card ${isFocused && focusedIndex === index ? "focused" : ""}`}
+          data-focusable="true"
+          className={`content-card ${isFocused && focusIndex === index ? "focused" : ""}`}
           onClick={() => openItem(item)}
         >
           <img
