@@ -21,7 +21,17 @@ export const KEYS = {
   INFO: 457,
   CH_UP: 427,
   CH_DOWN: 428,
-  GUIDE: 458
+  GUIDE: 458,
+  NUM_0: 48,
+  NUM_1: 49,
+  NUM_2: 50,
+  NUM_3: 51,
+  NUM_4: 52,
+  NUM_5: 53,
+  NUM_6: 54,
+  NUM_7: 55,
+  NUM_8: 56,
+  NUM_9: 57
 };
 
 export function isEnterKey(keyCode) {
@@ -70,7 +80,8 @@ export function registerTizenKeys() {
 
         "Info",
 
-        "Exit"
+        "Exit",
+        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"
       ];
 
       keys.forEach(key => {
