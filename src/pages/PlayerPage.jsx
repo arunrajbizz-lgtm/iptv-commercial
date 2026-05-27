@@ -194,6 +194,10 @@ export default function PlayerPage() {
 
     try {
       if (window.tizen && window.webapis?.avplay) {
+        // Create the <object> element if it doesn't exist
+        avplayManager.initialize("avplay-container");
+        avplayManager.createHTML5Player(url); // This creates the <object> tag on Tizen
+
         const success = await avplayManager.play(url);
         if (!success) {
           setError("Tizen playback failed");
