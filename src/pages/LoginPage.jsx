@@ -39,7 +39,8 @@ export default function LoginPage() {
           }
           break;
         case KEYS.DOWN:
-          if (focused < 4) {
+          const maxFocused = mode === 0 ? 4 : 2;
+          if (focused < maxFocused) {
             setFocused(prev => prev + 1);
             event.preventDefault();
           }
@@ -58,16 +59,12 @@ export default function LoginPage() {
           break;
         default:
           if (isEnter) {
-            if (focused === 4) {
+            if ((mode === 0 && focused === 4) || (mode === 1 && focused === 2)) {
               handleLogin();
               event.preventDefault();
             } else if (focused === 0) {
               setFocused(1);
               event.preventDefault();
-            } else {
-              // For inputs (1, 2, 3), let the native event through 
-              // so tizenInputFix or the browser can trigger the IME.
-              console.log("Enter on input field", focused);
             }
           }
           break;
@@ -79,16 +76,18 @@ export default function LoginPage() {
   }, [focused, mode, form, loading]);
 
   useEffect(() => {
-    if (focused === 1) hostRef.current?.focus();
-    else if (focused === 2) userRef.current?.focus();
-    else if (focused === 3) passRef.current?.focus();
-    else if (focused === 4 || focused === 0) {
-      // Blur any active input when moving to tabs or button
+    if (focused === 1) {
+       if (mode === 0) hostRef.current?.focus();
+       else hostRef.current?.focus(); // Same ref for M3U URL
+    }
+    else if (focused === 2 && mode === 0) userRef.current?.focus();
+    else if (focused === 3 && mode === 0) passRef.current?.focus();
+    else if (focused === 4 || focused === 0 || (mode === 1 && focused === 2)) {
       if (document.activeElement instanceof HTMLInputElement) {
         document.activeElement.blur();
       }
     }
-  }, [focused]);
+  }, [focused, mode]);
 
   async function handleLogin() {
     if (loading) return;
@@ -96,17 +95,27 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const host = normalizeXtreamHost(form.host);
-      const { username, password } = form;
+      if (mode === 0) {
+        const host = normalizeXtreamHost(form.host);
+        const { username, password } = form;
 
-      if (!host || !username || !password) {
-        throw new Error("Please fill in all fields");
+        if (!host || !username || !password) {
+          throw new Error("Please fill in all fields");
+        }
+
+        const result = await testXtreamLogin(host, username, password);
+        if (!result.ok) throw new Error(result.message || "Invalid credentials");
+
+        localStorage.setItem("iptv", JSON.stringify({ host, username, password, type: "xtream" }));
+      } else {
+        if (!form.m3u) throw new Error("Please enter M3U URL");
+        
+        // Basic validation
+        if (!form.m3u.startsWith("http")) throw new Error("Invalid URL");
+
+        localStorage.setItem("iptv", JSON.stringify({ url: form.m3u, type: "m3u" }));
       }
-
-      const result = await testXtreamLogin(host, username, password);
-      if (!result.ok) throw new Error("Invalid credentials");
-
-      localStorage.setItem("iptv", JSON.stringify({ host, username, password }));
+      
       navigateTo("/dashboard");
     } catch (err) {
       setError(err.message);
@@ -118,7 +127,7 @@ export default function LoginPage() {
   return (
     <div className="login-page">
       <div className="login-card fade-in">
-        <h1 className="sidebar-logo" style={{ marginBottom: "20px", textAlign: "center" }}>STREAMDECK</h1>
+        <h1 className="sidebar-logo" style={{ marginBottom: "20px", textAlign: "center" }}>STREAMVAULT</h1>
         <h2>Sign In</h2>
         
         <div className="mode-tabs">
@@ -131,59 +140,87 @@ export default function LoginPage() {
         </div>
 
         <div className="form-panel">
-          <div className={`field-row ${focused === 1 ? "focused" : ""}`}>
-            <span>SERVER URL</span>
-            <input 
-              ref={hostRef}
-              type="text" 
-              placeholder="http://your-provider.com:8080" 
-              value={form.host}
-              onChange={e => setForm({...form, host: e.target.value})}
-              onFocus={() => setFocused(1)}
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck="false"
-              autoComplete="off"
-            />
-          </div>
+          {mode === 0 ? (
+            <>
+              <div className={`field-row ${focused === 1 ? "focused" : ""}`}>
+                <span>SERVER URL</span>
+                <input 
+                  ref={hostRef}
+                  type="text" 
+                  placeholder="http://your-provider.com:8080" 
+                  value={form.host}
+                  onChange={e => setForm({...form, host: e.target.value})}
+                  onFocus={() => setFocused(1)}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck="false"
+                  autoComplete="off"
+                />
+              </div>
 
-          <div className={`field-row ${focused === 2 ? "focused" : ""}`}>
-            <span>USERNAME</span>
-            <input 
-              ref={userRef}
-              type="text" 
-              placeholder="Username" 
-              value={form.username}
-              onChange={e => setForm({...form, username: e.target.value})}
-              onFocus={() => setFocused(2)}
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck="false"
-              autoComplete="off"
-            />
-          </div>
+              <div className={`field-row ${focused === 2 ? "focused" : ""}`}>
+                <span>USERNAME</span>
+                <input 
+                  ref={userRef}
+                  type="text" 
+                  placeholder="Username" 
+                  value={form.username}
+                  onChange={e => setForm({...form, username: e.target.value})}
+                  onFocus={() => setFocused(2)}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck="false"
+                  autoComplete="off"
+                />
+              </div>
 
-          <div className={`field-row ${focused === 3 ? "focused" : ""}`}>
-            <span>PASSWORD</span>
-            <input 
-              ref={passRef}
-              type="password" 
-              placeholder="Password" 
-              value={form.password}
-              onChange={e => setForm({...form, password: e.target.value})}
-              onFocus={() => setFocused(3)}
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck="false"
-              autoComplete="off"
-            />
-          </div>
+              <div className={`field-row ${focused === 3 ? "focused" : ""}`}>
+                <span>PASSWORD</span>
+                <input 
+                  ref={passRef}
+                  type="password" 
+                  placeholder="Password" 
+                  value={form.password}
+                  onChange={e => setForm({...form, password: e.target.value})}
+                  onFocus={() => setFocused(3)}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck="false"
+                  autoComplete="off"
+                />
+              </div>
 
-          {error && <div style={{ color: "var(--primary)", fontWeight: "bold" }}>{error}</div>}
+              {error && <div style={{ color: "var(--primary)", fontWeight: "bold", margin: "10px 0" }}>{error}</div>}
 
-          <button className={`login-submit ${focused === 4 ? "focused" : ""}`} onClick={handleLogin}>
-            {loading ? "Connecting..." : "Connect"}
-          </button>
+              <button className={`login-submit ${focused === 4 ? "focused" : ""}`} onClick={handleLogin}>
+                {loading ? "Connecting..." : "Connect"}
+              </button>
+            </>
+          ) : (
+            <>
+              <div className={`field-row ${focused === 1 ? "focused" : ""}`}>
+                <span>M3U PLAYLIST URL</span>
+                <input 
+                  ref={hostRef}
+                  type="text" 
+                  placeholder="http://server.com/playlist.m3u" 
+                  value={form.m3u}
+                  onChange={e => setForm({...form, m3u: e.target.value})}
+                  onFocus={() => setFocused(1)}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck="false"
+                  autoComplete="off"
+                />
+              </div>
+
+              {error && <div style={{ color: "var(--primary)", fontWeight: "bold", margin: "10px 0" }}>{error}</div>}
+
+              <button className={`login-submit ${focused === 2 ? "focused" : ""}`} onClick={handleLogin}>
+                {loading ? "Loading M3U..." : "Load Playlist"}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

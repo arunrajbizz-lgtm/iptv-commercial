@@ -187,15 +187,11 @@ export default function MoviesPage() {
 
   function openMovie(movie) {
     if (!movie) return;
-    localStorage.setItem("stream_id", movie.stream_id);
-    localStorage.setItem("stream_name", movie.name);
-    localStorage.setItem("stream_type", "movie");
-    localStorage.setItem("stream_icon", movie.stream_icon);
-    
+    localStorage.setItem("selected_movie", JSON.stringify(movie));
     localStorage.setItem("movie_focused_category_id", categories[focusedCategory]?.category_id);
     
     navigationManager.push("/movies");
-    navigateTo("/player");
+    navigateTo("/movie-info");
   }
 
   return (

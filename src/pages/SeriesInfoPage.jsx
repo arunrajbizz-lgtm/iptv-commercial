@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { KEYS } from "../utils/tizenRemote";
 import { getSeriesInfo } from "../services/xtreamApi";
 import focusManager from "../core/FocusManager";
+import { getResumePosition } from "../utils/ResumeManager";
 
 export default function SeriesInfoPage() {
   const [series, setSeries] = useState(null);
@@ -51,6 +52,16 @@ export default function SeriesInfoPage() {
   }
 
   const currentEpisodes = activeSeason ? (seasons[activeSeason] || []) : [];
+
+  function getEpisodeProgress(episode) {
+    const epId = episode.id || episode.episode_id;
+    if (!epId) return 0;
+    const resume = getResumePosition(epId);
+    if (resume && resume.duration > 0) {
+      return (resume.currentTime / resume.duration) * 100;
+    }
+    return 0;
+  }
 
   useEffect(() => {
     function handleKeys(event) {
@@ -173,28 +184,36 @@ export default function SeriesInfoPage() {
         {/* EPISODES LIST */}
         <h2 className="row-title">Season {activeSeason} - Episodes ({currentEpisodes.length})</h2>
         <div className="channel-list-v">
-          {currentEpisodes.map((ep, index) => (
-            <div
-              key={`${ep.id}-${index}`}
-              data-episode-index={index}
-              className={`channel-item ${zone === "content" && focusedEpisode === index ? "focused" : ""}`}
-              onClick={openEpisode}
-              style={{ height: "140px" }}
-            >
-              <div style={{ fontSize: "50px", fontWeight: "900", opacity: 0.2, minWidth: "100px", textAlign: "center" }}>
-                {ep.episode_num || index + 1}
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: "28px", fontWeight: "700", marginBottom: "5px" }}>
-                  {ep.title}
+          {currentEpisodes.map((ep, index) => {
+            const progress = getEpisodeProgress(ep);
+            return (
+              <div
+                key={`${ep.id}-${index}`}
+                data-episode-index={index}
+                className={`channel-item ${zone === "content" && focusedEpisode === index ? "focused" : ""}`}
+                onClick={openEpisode}
+                style={{ height: "140px", position: "relative" }}
+              >
+                <div style={{ fontSize: "50px", fontWeight: "900", opacity: 0.2, minWidth: "100px", textAlign: "center" }}>
+                  {ep.episode_num || index + 1}
                 </div>
-                <div style={{ fontSize: "20px", color: "var(--text-dim)", maxWidth: "800px" }}>
-                  {ep.info?.plot || ep.plot || "No description available."}
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: "28px", fontWeight: "700", marginBottom: "5px" }}>
+                    {ep.title}
+                  </div>
+                  <div style={{ fontSize: "20px", color: "var(--text-dim)", maxWidth: "800px" }}>
+                    {ep.info?.plot || ep.plot || "No description available."}
+                  </div>
+                  {progress > 0 && (
+                    <div style={{ width: "200px", height: "4px", background: "rgba(255,255,255,0.2)", marginTop: "10px", borderRadius: "2px", overflow: "hidden" }}>
+                      <div style={{ width: `${progress}%`, height: "100%", background: "var(--primary)" }} />
+                    </div>
+                  )}
                 </div>
+                {zone === "content" && focusedEpisode === index && <div style={{ fontSize: "40px" }}>▶</div>}
               </div>
-              {zone === "content" && focusedEpisode === index && <div style={{ fontSize: "40px" }}>▶</div>}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

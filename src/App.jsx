@@ -11,6 +11,7 @@ import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/Dashboard";
 import LiveTVPage from "./pages/LiveTVPage";
 import MoviesPage from "./pages/MoviesPage";
+import MovieInfoPage from "./pages/MovieInfoPage";
 import SeriesPage from "./pages/SeriesPage";
 import SeriesInfoPage from "./pages/SeriesInfoPage";
 import PlayerPage from "./pages/PlayerPage";
@@ -83,6 +84,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <MoviesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/movie-info"
+          element={
+            <ProtectedRoute>
+              <MovieInfoPage />
             </ProtectedRoute>
           }
         />

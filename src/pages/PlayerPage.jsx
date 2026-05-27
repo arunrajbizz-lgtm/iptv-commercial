@@ -129,6 +129,21 @@ export default function PlayerPage() {
 
     initializePlayer();
 
+    // AUTO PIP ON VISIBILITY CHANGE (Mobile/Browser)
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === "hidden") {
+        const video = document.getElementById("browser-video");
+        if (video && !video.paused && document.pictureInPictureEnabled) {
+          try {
+            await video.requestPictureInPicture();
+          } catch (e) {
+            console.log("PiP failed", e);
+          }
+        }
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     // PROGRESS TIMER
     const timer = setInterval(() => {
       try {

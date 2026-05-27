@@ -130,6 +130,17 @@ export async function getMovies(
   return data || [];
 }
 
+export async function getMovieInfo(host, username, password, streamId) {
+  const data = await apiRequest(
+    host,
+    username,
+    password,
+    `get_vod_info&stream_id=${encodeURIComponent(streamId)}`
+  );
+
+  return data || {};
+}
+
 export async function getSeriesCategories(host, username, password) {
   const data = await apiRequest(
     host,

@@ -82,12 +82,18 @@ export default function LiveTVPage() {
     }
   }, [filteredChannels]);
 
+  const [viewMode, setViewMode] = useState("icon"); // 'icon' or 'text'
+
   useEffect(() => {
     function handleKeys(event) {
       const currentZone = focusManager.getZone();
       if (currentZone === "sidebar") return;
 
       switch (event.keyCode) {
+        case KEYS.BLUE:
+          setViewMode(prev => (prev === "icon" ? "text" : "icon"));
+          break;
+        
         case KEYS.UP:
           if (zone === "drawer") {
             setFocusedCategory(prev => (prev > 0 ? prev - 1 : filteredCategories.length - 1));
@@ -227,9 +233,14 @@ export default function LiveTVPage() {
       </div>
 
       <main className="app-main browse-container">
-        <h1 className="hero-title" style={{ fontSize: "60px", marginBottom: "50px" }}>
-           {categories[focusedCategory]?.category_name || "Live TV"}
-        </h1>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "30px" }}>
+           <h1 className="hero-title" style={{ fontSize: "60px", margin: 0 }}>
+              {categories[focusedCategory]?.category_name || "Live TV"}
+           </h1>
+           <div style={{ background: "var(--blue)", padding: "10px 20px", borderRadius: "4px", fontWeight: "bold", fontSize: "18px" }}>
+              BLUE: {viewMode === "icon" ? "TEXT MODE" : "ICON MODE"}
+           </div>
+        </div>
 
         {loading ? <div className="netflix-loader" /> : (
              <div className="channel-list-v" ref={channelListRef}>
@@ -238,9 +249,12 @@ export default function LiveTVPage() {
                     key={`${channel.stream_id}-${index}`}
                     className={`channel-item ${focusedChannel === index && zone === "content" ? "focused" : ""}`}
                     onClick={() => openChannel(channel)}
+                    style={{ height: viewMode === "text" ? "70px" : "110px" }}
                   >
-                     <img src={channel.stream_icon} alt="" className="channel-icon" />
-                     <div className="channel-name">{channel.name}</div>
+                     {viewMode === "icon" && <img src={channel.stream_icon} alt="" className="channel-icon" />}
+                     <div className="channel-name" style={{ fontSize: viewMode === "text" ? "32px" : "26px" }}>
+                        {channel.name}
+                     </div>
                   </div>
                 ))}
              </div>
