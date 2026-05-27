@@ -1,3 +1,5 @@
+import { isEnterKey } from "./tizenRemote";
+
 export function enableTizenInputFix() {
   console.log("Tizen Input Fix Enabled");
 
@@ -26,14 +28,6 @@ export function enableTizenInputFix() {
           } catch (err) {
             // ignore if not supported
           }
-
-          // 3. For very stubborn TVs, a quick blur/focus might help, 
-          // but we do it only once to avoid loops
-          if (!el.dataset.imeAttempted) {
-            el.dataset.imeAttempted = "true";
-            // No, blur/focus often causes more issues on TV. 
-            // Stick to click + selection for now.
-          }
         }
       }, 250); // Slightly longer delay for system to settle
     } else {
@@ -46,14 +40,7 @@ export function enableTizenInputFix() {
     if (!el) return;
 
     const isInput = el.tagName === "INPUT" || el.tagName === "TEXTAREA";
-
-    // Samsung Remote "Enter/OK" Variations
-    const isEnter = 
-      e.keyCode === 13 ||      // Standard
-      e.keyCode === 65376 ||   // Samsung Done
-      e.keyCode === 65385 ||   // Samsung OK
-      e.keyCode === 29443 ||   // Samsung Enter
-      e.key === "Enter";
+    const isEnter = isEnterKey(e.keyCode) || e.key === "Enter";
 
     if (isInput && isEnter) {
       console.log("Enter key on input, triggering click for IME");

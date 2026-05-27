@@ -4,6 +4,9 @@ export const KEYS = {
   RIGHT: 39,
   DOWN: 40,
   ENTER: 13,
+  ENTER_SAMSUNG: 29443,
+  OK_SAMSUNG: 65385,
+  DONE_SAMSUNG: 65376,
   BACK: 10009,
   EXIT: 10182,
   PLAY: 415,
@@ -20,6 +23,15 @@ export const KEYS = {
   CH_DOWN: 428,
   GUIDE: 458
 };
+
+export function isEnterKey(keyCode) {
+  return (
+    keyCode === KEYS.ENTER ||
+    keyCode === KEYS.ENTER_SAMSUNG ||
+    keyCode === KEYS.OK_SAMSUNG ||
+    keyCode === KEYS.DONE_SAMSUNG
+  );
+}
 
 // REGISTER
 export function registerTizenKeys() {
