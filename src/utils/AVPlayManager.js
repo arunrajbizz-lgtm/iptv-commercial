@@ -1,8 +1,8 @@
 class AVPlayManager {
   constructor() {
-    this.player = null;
+    this.player = (window.webapis && window.webapis.avplay) ? window.webapis.avplay : null;
     this.container = null;
-    this.initialized = false;
+    this.initialized = !!this.player;
     this.currentUrl = "";
     this.retryAttempted = false;
   }
@@ -10,18 +10,18 @@ class AVPlayManager {
   // INIT
   async initialize(containerId) {
     try {
+      this.container = document.getElementById(containerId);
+      
       // TIZEN
       if (window.webapis && window.webapis.avplay) {
         this.player = window.webapis.avplay;
-        this.container = document.getElementById(containerId);
         this.initialized = true;
         console.log("AVPlay Ready");
         return true;
       }
 
       // HTML5 FALLBACK
-      this.container = document.getElementById(containerId);
-      console.log("Fallback Video Player");
+      console.log("Fallback Video Player Ready");
       this.initialized = true;
       return true;
     } catch (error) {

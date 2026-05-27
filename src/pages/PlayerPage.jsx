@@ -108,6 +108,10 @@ export default function PlayerPage() {
     setFavorite] =
     useState(false);
 
+  const [error,
+    setError] =
+    useState("");
+
   const [currentTime, setCurrentTime] = useState("00:00");
   const [duration, setDuration] = useState("00:00");
   const [progress, setProgress] = useState(0);
@@ -188,24 +192,11 @@ export default function PlayerPage() {
 
     try {
       if (window.tizen && window.webapis?.avplay) {
-        await avplayManager.stop();
-
-        const playUrl = url; // keep original stream URL
-        await avplayManager.open(playUrl);
-
-        avplayManager.setDisplayRect(0, 0, window.innerWidth, window.innerHeight);
-        avplayManager.prepareAsync(
-          () => {
-            avplayManager.play();
-            setLoading(false);
-          },
-          (err) => {
-            console.error("Tizen AVPlay error:", err);
-            setError("Tizen playback failed");
-            setLoading(false);
-          }
-        );
-
+        const success = await avplayManager.play(url);
+        if (!success) {
+          setError("Tizen playback failed");
+        }
+        setLoading(false);
         return;
       }
 
@@ -240,7 +231,7 @@ export default function PlayerPage() {
       }
     } catch (err) {
       console.error("Playback failed:", err);
-      setError("Playback failed");
+      setError("Playback failed: " + (err.message || "Unknown error"));
       setLoading(false);
     }
   };
@@ -428,11 +419,9 @@ export default function PlayerPage() {
       autoHide();
 
     } catch (error) {
-
       console.log(error);
-
       alert(
-        "Playback Failed"
+        "Playback Failed: " + (error.message || "Unknown error")
       );
     }
   }
