@@ -258,6 +258,18 @@ class AVPlayManager {
     }
   }
 
+  // GET STATE
+  getState() {
+    try {
+      if (this.player) {
+        return this.player.getState();
+      }
+    } catch (e) {
+      return "NONE";
+    }
+    return "NONE";
+  }
+
   // SEEK
   seek(seconds) {
     try {

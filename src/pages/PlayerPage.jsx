@@ -131,13 +131,13 @@ export default function PlayerPage() {
       try {
         const video = hlsInstance && hlsInstance.media
           ? hlsInstance.media
-          : isBrowser ? document.getElementById("browser-video")
+          : !window.tizen ? document.getElementById("browser-video")
           : avplayManager;
           
         if (!video) return;
 
-        const cur = isBrowser ? video.currentTime : video.getCurrentTime();
-        const dur = isBrowser ? video.duration : video.getDuration();
+        const cur = !window.tizen ? video.currentTime : video.getCurrentTime();
+        const dur = !window.tizen ? video.duration : video.getDuration();
 
         if (dur > 0) {
           setProgress((cur / dur) * 100);
@@ -145,27 +145,26 @@ export default function PlayerPage() {
         }
         setCurrentTime(formatTime(cur));
       } catch (e) {}
-    }, 1000);
+    }, 10000); // Check every 10s is enough for history/resume
 
     return () => {
       document.documentElement.classList.remove("player-active");
       clearInterval(timer);
-      clearTimeout(window.controlsTimeout);
       clearTimeout(window.liveFallbackTimeout);
       try {
         if (hlsInstance) {
           hlsInstance.destroy();
-          setHlsInstance(null);
+          // setHlsInstance(null); // Setting null here triggers re-renders, avoid in cleanup
         }
 
         avplayManager.stop();
 
       } catch (error) {
-
         console.log(error);
       }
     };
-  }, [hlsInstance, isBrowser]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run once on mount
 
   function formatTime(seconds) {
     if (!seconds || isNaN(seconds)) return "00:00";
@@ -255,7 +254,7 @@ export default function PlayerPage() {
     if (hlsInstance && hlsInstance.media) {
       return hlsInstance.media.currentTime || 0;
     }
-    if (isBrowser) {
+    if (!window.tizen) {
       return document.getElementById("browser-video")?.currentTime || 0;
     }
     return avplayManager.getCurrentTime();
@@ -344,7 +343,7 @@ export default function PlayerPage() {
       }
 
       // LIVE
-      else if (streamType === "live") {
+      else if (sType === "live") {
         url = buildLiveUrl(iptv.host, iptv.username, iptv.password, streamId, "ts");
       }
 
@@ -389,18 +388,22 @@ export default function PlayerPage() {
         console.log("Trying .ts first for Live TV");
         await startStreaming(url);
 
-        // Give 10 sec to re-try next (.m3u8)
+        // Smart Fallback: Only switch if not playing after 10 seconds
         window.liveFallbackTimeout = setTimeout(async () => {
-          // Verify we are still looking at the same stream before falling back
           const currentId = localStorage.getItem("stream_id");
-          if (currentId === streamId) {
-            console.log("Live TV Fallback: Switching to .m3u8 after 10s timeout");
+          if (currentId !== streamId) return;
+
+          const state = window.tizen ? avplayManager.getState() : "PLAYING";
+          if (state !== "PLAYING") {
+            console.log("Live TV Fallback: Player not playing, switching to .m3u8");
             const fallbackUrl = buildLiveUrl(iptv.host, iptv.username, iptv.password, streamId, "m3u8");
             if (window.tizen) {
               try { await avplayManager.stop(); } catch (e) {}
             }
             await startStreaming(fallbackUrl);
             setStreamUrl(fallbackUrl);
+          } else {
+            console.log("Live TV: Stream is stable, skipping fallback.");
           }
         }, 10000);
 
