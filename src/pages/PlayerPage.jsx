@@ -125,6 +125,7 @@ export default function PlayerPage() {
       "player"
     );
 
+    document.documentElement.classList.add("player-active");
     initializePlayer();
 
     // PROGRESS TIMER
@@ -150,6 +151,7 @@ export default function PlayerPage() {
     }, 1000);
 
     const cleanup = () => {
+      document.documentElement.classList.remove("player-active");
       clearInterval(timer);
       clearTimeout(window.controlsTimeout);
       clearTimeout(window.liveFallbackTimeout);
@@ -926,7 +928,7 @@ export default function PlayerPage() {
     <div style={{
       width: "100%",
       height: "100vh",
-      background: "#000",
+      background: "transparent",
       position: "relative",
       overflow: "hidden"
     }}>
