@@ -1,4 +1,4 @@
-export function normalizeXtreamHost(host) {
+xport function normalizeXtreamHost(host) {
   let fixedHost = String(host || "").trim();
 
   if (!fixedHost) return "";
